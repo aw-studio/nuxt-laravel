@@ -2,7 +2,7 @@ import {
     defineNuxtModule,
     createResolver,
     addImportsDir,
-    addPlugin,
+    // addPlugin,
 } from '@nuxt/kit'
 import { defu } from 'defu'
 
@@ -14,12 +14,12 @@ export type ModuleOptions = {
         redirectAuthenticated: string
         redirectUnauthenticated: string
     }
-    reverb?: {
-        appKey?: string
-        host?: string
-        wsPort?: number
-        wssPort?: number
-    }
+    // reverb?: {
+    //     appKey?: string
+    //     host?: string
+    //     wsPort?: number
+    //     wssPort?: number
+    // }
 }
 
 const defaultModuleOptions: ModuleOptions = {
@@ -28,12 +28,12 @@ const defaultModuleOptions: ModuleOptions = {
         redirectAuthenticated: '',
         redirectUnauthenticated: '',
     },
-    reverb: {
-        appKey: undefined,
-        host: undefined,
-        wsPort: undefined,
-        wssPort: undefined,
-    },
+    // reverb: {
+    //     appKey: undefined,
+    //     host: undefined,
+    //     wsPort: undefined,
+    //     wssPort: undefined,
+    // },
 }
 
 export default defineNuxtModule<ModuleOptions>({
@@ -53,7 +53,7 @@ export default defineNuxtModule<ModuleOptions>({
 
         addImportsDir(resolver.resolve('./runtime/composables'))
 
-        addPlugin(resolver.resolve('./runtime/plugins/echo.client'))
+        // addPlugin(resolver.resolve('./runtime/plugins/echo.client'))
 
         // TODO: addTypeTemplate
     },
