@@ -11,11 +11,9 @@ declare global {
     }
 }
 
+window.Pusher = Pusher
+
 export default defineNuxtPlugin(() => {
-    if (!import.meta.client) return
-
-    window.Pusher = Pusher
-
     const config = useLaravelConfig()
     const { csrf } = useLaravelSanctum()
     const { post } = useLaravelApi()
