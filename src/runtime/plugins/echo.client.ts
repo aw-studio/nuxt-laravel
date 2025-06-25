@@ -1,22 +1,17 @@
 import Echo from 'laravel-echo'
-import Pusher from 'pusher-js'
 import { useLaravelConfig } from '../composables/useLaravelConfig'
 import { useLaravelSanctum } from '../composables/useLaravelSanctum'
 import { useLaravelApi } from '../composables/useLaravelApi'
 import { defineNuxtPlugin } from '#app'
 
-declare global {
-    interface Window {
-        Pusher: typeof Pusher
-    }
-}
-
-window.Pusher = Pusher
-
-export default defineNuxtPlugin(() => {
+export default defineNuxtPlugin(async () => {
     const config = useLaravelConfig()
     const { csrf } = useLaravelSanctum()
     const { post } = useLaravelApi()
+
+    const Pusher = (await import('pusher-js')).default
+    // @ts-expect-error: Pusher is not typed in the Echo package
+    window.Pusher = Pusher
 
     if (!config.reverb) {
         return {}
