@@ -30,6 +30,7 @@ export default defineNuxtPlugin(async () => {
         wssPort: config.reverb.wssPort,
         forceTLS: false,
         enabledTransports: ['ws', 'wss'],
+        client: Pusher,
         authorizer: (channel: any) => {
             return {
                 authorize: (
