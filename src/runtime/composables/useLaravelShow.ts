@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { useAsyncData } from 'nuxt/app'
 import { useLaravelApi } from './useLaravelApi'
 
@@ -6,7 +6,12 @@ type ModelResponse<T> = { data: T }
 
 export async function useLaravelShow<T extends Record<string, any>>(
     endpoint: string
-) {
+): Promise<{
+    loading: Ref<boolean>
+    data: Ref<T | null>
+    error: Ref<any>
+    refresh: () => Promise<void>
+}> {
     const loading = ref(false)
 
     const load = async () => {
@@ -34,10 +39,8 @@ export async function useLaravelShow<T extends Record<string, any>>(
 
     return {
         loading,
-        data,
+        data: data as Ref<T | null>,
         error,
         refresh,
     }
 }
-
-export default useLaravelShow

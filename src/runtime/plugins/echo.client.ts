@@ -1,5 +1,5 @@
 import Echo from 'laravel-echo'
-import PusherPkg from 'pusher-js'
+import Pusher from 'pusher-js'
 import { useLaravelConfig } from '../composables/useLaravelConfig'
 import { useLaravelSanctum } from '../composables/useLaravelSanctum'
 import { useLaravelApi } from '../composables/useLaravelApi'
@@ -10,8 +10,6 @@ declare global {
         Pusher: typeof Pusher
     }
 }
-
-const Pusher = (PusherPkg as any).default || PusherPkg
 
 export default defineNuxtPlugin(() => {
     if (!import.meta.client) return
