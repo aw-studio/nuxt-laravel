@@ -6,7 +6,6 @@ export type UserProfile = {
 
 export type UserProfileForm = Omit<UserProfile, 'id'>
 
-// ✅ Valid composable
 export const useUserProfile = () => {
     const userProfile = useState('user-profile', () => null)
     const isLoaded = useState('user-profile-loaded', () => false)

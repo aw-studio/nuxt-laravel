@@ -1,4 +1,4 @@
-import { useAsyncData, useRoute, useRouter, useState } from 'nuxt/app'
+import { useRoute, useRouter, useState } from 'nuxt/app'
 import { computed, toRefs, watch } from 'vue'
 import { md5 } from '../utils/md5'
 import type {
@@ -11,7 +11,7 @@ import type {
 import { prepareQueryParams } from '../utils/prepareQueryParams'
 import { useLaravelApi } from './useLaravelApi'
 
-export async function useLaravelIndex<T extends object>(
+export function useLaravelIndex<T extends object>(
     endpoint: string,
     options?: LaravelIndexOptions
 ) {
@@ -269,12 +269,12 @@ export async function useLaravelIndex<T extends object>(
     }
 
     // load the first page on init
-    if (state.value.__hash === undefined) {
-        stateHash()
-        await useAsyncData(`${endpoint}`, async () => {
-            return await load()
-        })
-    }
+    // if (state.value.__hash === undefined) {
+    //     stateHash()
+    //     await useAsyncData(`${endpoint}`, async () => {
+    //         return await load()
+    //     })
+    // }
 
     return {
         ...toRefs(state.value),
