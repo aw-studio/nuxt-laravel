@@ -5,7 +5,10 @@ import { useLaravelApi } from './useLaravelApi'
 type ModelResponse<T> = { data: T }
 
 export async function useLaravelGet<T extends Record<string, any>>(
-    endpoint: string
+    endpoint: string,
+    options?: {
+        query?: Record<string, any>
+    }
 ): Promise<{
     loading: Ref<boolean>
     data: Ref<T | null>
@@ -17,6 +20,12 @@ export async function useLaravelGet<T extends Record<string, any>>(
     const load = async () => {
         const { get } = useLaravelApi()
         loading.value = true
+
+        // If options.query is provided, append it to the endpoint
+        if (options?.query) {
+            const queryParams = new URLSearchParams(options.query).toString()
+            endpoint = `${endpoint}?${queryParams}`
+        }
 
         try {
             const response: ModelResponse<T> = await get(endpoint)
