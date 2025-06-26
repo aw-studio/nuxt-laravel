@@ -14,15 +14,15 @@ export async function useLaravelGet<T extends Record<string, any>>(
 }> {
     const loading = ref(false)
 
+    // If options.query is provided, append it to the endpoint
+    if (options?.query) {
+        const queryParams = new URLSearchParams(options.query).toString()
+        endpoint = `${endpoint}?${queryParams}`
+    }
+
     const load = async () => {
         const { get } = useLaravelApi()
         loading.value = true
-
-        // If options.query is provided, append it to the endpoint
-        if (options?.query) {
-            const queryParams = new URLSearchParams(options.query).toString()
-            endpoint = `${endpoint}?${queryParams}`
-        }
 
         try {
             const response: ModelResponse<T> = await get(endpoint)
