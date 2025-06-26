@@ -4,7 +4,7 @@ import { useLaravelApi } from './useLaravelApi'
 
 type ModelResponse<T> = { data: T }
 
-export async function useLaravelShow<T extends Record<string, any>>(
+export async function useLaravelGet<T extends Record<string, any>>(
     endpoint: string
 ): Promise<{
     loading: Ref<boolean>

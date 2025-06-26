@@ -1,6 +1,6 @@
 import type { ZodObject, ZodRawShape } from 'zod'
 import { useLaravelIndex } from './useLaravelIndex'
-import { useLaravelShow } from './useLaravelShow'
+import { useLaravelGet } from './useLaravelGet'
 import { useLaravelForm } from './useLaravelForm'
 
 type CrudParams<TForm> = {
@@ -45,7 +45,7 @@ export function useLaravelCrud<
     const { endpoint, schema, initialValues, updateSchema } = params
 
     const show = async (id: string, showEndpoint?: string) =>
-        useLaravelShow<TModel>(`${showEndpoint || endpoint}/${id}`)
+        useLaravelGet<TModel>(`${showEndpoint || endpoint}/${id}`)
     const index = (options?: any, indexEndpoint?: string) =>
         useLaravelIndex<TModel>(indexEndpoint || endpoint, options)
 
