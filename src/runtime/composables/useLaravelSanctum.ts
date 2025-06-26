@@ -1,19 +1,9 @@
 import * as z from 'zod'
 import { useRouter } from 'nuxt/app'
+import type { LoginForm, RegisterRequest } from '../types'
 import { useLaravelApi } from './useLaravelApi'
 import { useLaravelForm } from './useLaravelForm'
 import { useLaravelConfig } from './useLaravelConfig'
-
-export type LoginForm = {
-    email: string
-    password: string
-}
-export type RegisterRequest = {
-    name: string
-    email: string
-    password: string
-    password_confirmation: string
-}
 
 export const useLaravelSanctum = () => {
     const { client } = useLaravelApi()

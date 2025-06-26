@@ -1,16 +1,8 @@
-import type { ZodObject, ZodRawShape } from 'zod'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { reactive, watch } from 'vue'
+import type { LaravelFormOptions } from '../types'
 import { useLaravelApi } from './useLaravelApi'
-
-type LaravelFormOptions<TForm extends Record<string, any>> = {
-    initialValues: TForm
-    submitUrl: string
-    schema: ZodObject<ZodRawShape>
-    method?: 'POST' | 'PUT'
-    onSubmitSuccess?: (response: any) => void
-}
 
 export function useLaravelForm<TForm extends Record<string, any>>(
     options: LaravelFormOptions<TForm>

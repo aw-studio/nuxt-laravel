@@ -1,14 +1,11 @@
 import { ref, type Ref } from 'vue'
 import { useAsyncData } from 'nuxt/app'
+import type { LaravelGetOptions, ModelResponse } from '../types'
 import { useLaravelApi } from './useLaravelApi'
-
-type ModelResponse<T> = { data: T }
 
 export async function useLaravelGet<T extends Record<string, any>>(
     endpoint: string,
-    options?: {
-        query?: Record<string, any>
-    }
+    options?: LaravelGetOptions
 ): Promise<{
     loading: Ref<boolean>
     data: Ref<T | null>

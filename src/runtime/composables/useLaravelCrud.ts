@@ -1,42 +1,7 @@
-import type { ZodObject, ZodRawShape } from 'zod'
+import type { CrudParams } from '../types'
 import { useLaravelIndex } from './useLaravelIndex'
 import { useLaravelGet } from './useLaravelGet'
 import { useLaravelForm } from './useLaravelForm'
-
-type CrudParams<TForm> = {
-    /**
-     * The default endpoint for the model, used for CRUD operations.
-     *
-     * @var {string}
-     * @example '/api/events'
-     */
-    endpoint: string
-
-    /**
-     * The Zod schema for the model, used for validation.
-     *
-     * @var {ZodObject<ZodRawShape>}
-     * @example z.object({ name: z.string().min(1) })
-     */
-    schema: ZodObject<ZodRawShape>
-
-    /**
-     * The initial values for the form, used to populate the form fields.
-     *
-     * @var {TForm}
-     * @example { name: '', active: boolean }
-     */
-    initialValues: TForm
-
-    /**
-     * Optional Zod schema for updating the model, used for validation.
-     * If not provided, the main schema will be used.
-     *
-     * @var {ZodObject<ZodRawShape>}
-     * @example z.object({ name: z.string().min(1) })
-     */
-    updateSchema?: ZodObject<ZodRawShape>
-}
 
 export function useLaravelCrud<
     TModel extends Record<string, any>,

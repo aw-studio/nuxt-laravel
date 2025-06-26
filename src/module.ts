@@ -54,7 +54,5 @@ export default defineNuxtModule<ModuleOptions>({
         addImportsDir(resolver.resolve('./runtime/composables'))
 
         // addPlugin(resolver.resolve('./runtime/plugins/echo.client'))
-
-        // TODO: addTypeTemplate
     },
 })

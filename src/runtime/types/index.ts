@@ -1,3 +1,5 @@
+import type { ZodObject, ZodRawShape } from 'zod'
+
 export type LaravelResponseMeta = {
     total: number
     per_page: number
@@ -67,3 +69,63 @@ export type Filter =
     | { [key: string]: FilterOperatorOption | string | number | boolean }
     | { $or: Filter[] }
     | { $and: Filter[] }
+
+export type ModelResponse<T> = { data: T }
+
+export type LaravelGetOptions = {
+    query?: Record<string, any>
+}
+
+export type CrudParams<TForm> = {
+    /**
+     * The default endpoint for the model, used for CRUD operations.
+     *
+     * @var {string}
+     * @example '/api/events'
+     */
+    endpoint: string
+
+    /**
+     * The Zod schema for the model, used for validation.
+     *
+     * @var {ZodObject<ZodRawShape>}
+     * @example z.object({ name: z.string().min(1) })
+     */
+    schema: ZodObject<ZodRawShape>
+
+    /**
+     * The initial values for the form, used to populate the form fields.
+     *
+     * @var {TForm}
+     * @example { name: '', active: boolean }
+     */
+    initialValues: TForm
+
+    /**
+     * Optional Zod schema for updating the model, used for validation.
+     * If not provided, the main schema will be used.
+     *
+     * @var {ZodObject<ZodRawShape>}
+     * @example z.object({ name: z.string().min(1) })
+     */
+    updateSchema?: ZodObject<ZodRawShape>
+}
+
+export type LaravelFormOptions<TForm extends Record<string, any>> = {
+    initialValues: TForm
+    submitUrl: string
+    schema: ZodObject<ZodRawShape>
+    method?: 'POST' | 'PUT'
+    onSubmitSuccess?: (response: any) => void
+}
+
+export type LoginForm = {
+    email: string
+    password: string
+}
+export type RegisterRequest = {
+    name: string
+    email: string
+    password: string
+    password_confirmation: string
+}
