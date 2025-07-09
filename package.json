@@ -1,6 +1,6 @@
 {
     "name": "@aw-studio/nuxt-laravel",
-    "version": "0.0.15",
+    "version": "0.0.16",
     "description": "Nuxt Laravel",
     "repository": "aw-studio/nuxt-laravel",
     "license": "MIT",
