@@ -7,12 +7,12 @@ export default defineNuxtConfig({
             redirectAuthenticated: '/dashboard',
             redirectUnauthenticated: '/login',
         },
-        reverb: {
-            appKey: 'm3tx8tkuw5beqynefafg',
-            host: 'localhost',
-            wsPort: 8080,
-            wssPort: 8080,
-        },
+        // reverb: {
+        //     appKey: 'm3tx8tkuw5beqynefafg',
+        //     host: 'localhost',
+        //     wsPort: 8080,
+        //     wssPort: 8080,
+        // },
     },
     devtools: { enabled: true },
 })

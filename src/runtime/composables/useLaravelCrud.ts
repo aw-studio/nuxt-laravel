@@ -7,7 +7,16 @@ export function useLaravelCrud<
     TModel extends Record<string, any>,
     TForm extends Record<string, any>
 >(params: CrudParams<TForm>) {
-    const { endpoint, schema, initialValues, updateSchema } = params
+    const {
+        endpoint,
+        schema,
+        initialValues,
+        updateSchema,
+        onCreateSuccess,
+        onCreateError,
+        onUpdateSuccess,
+        onUpdateError,
+    } = params
 
     const show = async (id: string, showEndpoint?: string) =>
         useLaravelGet<TModel>(`${showEndpoint || endpoint}/${id}`)
@@ -20,6 +29,8 @@ export function useLaravelCrud<
             submitUrl: createEndpoint || endpoint,
             schema,
             method: 'POST',
+            onSubmitSuccess: onCreateSuccess,
+            onSubmitError: onCreateError,
         })
 
     const update = (model: TForm, updateEndpoint?: string) =>
@@ -28,6 +39,8 @@ export function useLaravelCrud<
             submitUrl: `${updateEndpoint || endpoint}/${model.id}`,
             schema: updateSchema || schema,
             method: 'PUT',
+            onSubmitSuccess: onUpdateSuccess,
+            onSubmitError: onUpdateError,
         })
 
     return {

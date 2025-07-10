@@ -109,6 +109,12 @@ export type CrudParams<TForm> = {
      * @example z.object({ name: z.string().min(1) })
      */
     updateSchema?: ZodObject<ZodRawShape>
+
+    onCreateSuccess?: (response: any) => void
+    onUpdateSuccess?: (response: any) => void
+
+    onCreateError?: (error: any) => void
+    onUpdateError?: (error: any) => void
 }
 
 export type LaravelFormOptions<TForm extends Record<string, any>> = {
@@ -117,6 +123,7 @@ export type LaravelFormOptions<TForm extends Record<string, any>> = {
     schema: ZodObject<ZodRawShape>
     method?: 'POST' | 'PUT'
     onSubmitSuccess?: (response: any) => void
+    onSubmitError?: (error: any) => void
 }
 
 export type LoginForm = {

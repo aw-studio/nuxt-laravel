@@ -1,20 +1,20 @@
 <template>
     <div>
-        Lorem ipsum dolor sit amet consectetur adipisicing elit. Laborum est
-        eum, nemo maxime ratione nesciunt vitae! Quia minima ipsam porro fugit
-        quidem incidunt aspernatur quos, eos odio atque quo enim.
-        <button
-            v-if="hasNextPage"
-            @click="nextPage"
-        >
-            next
-        </button>
-        <button
-            v-if="hasPrevPage"
-            @click="prevPage"
-        >
-            prev
-        </button>
+        <CreateTodo />
+        <div>
+            <button
+                v-if="hasNextPage"
+                @click="nextPage"
+            >
+                next
+            </button>
+            <button
+                v-if="hasPrevPage"
+                @click="prevPage"
+            >
+                prev
+            </button>
+        </div>
         <pre>{{ items }}</pre>
     </div>
 </template>
@@ -25,7 +25,12 @@ definePageMeta({
 })
 
 const { index } = useTodos
-const { items, nextPage, prevPage, hasNextPage, hasPrevPage } = await index({
-    syncUrl: true,
+const { items, nextPage, prevPage, hasNextPage, hasPrevPage, load } =
+    await index({
+        syncUrl: true,
+    })
+
+onMounted(() => {
+    load()
 })
 </script>
