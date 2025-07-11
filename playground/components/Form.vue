@@ -5,12 +5,10 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps({
-    for: {
-        type: Function,
+defineProps({
+    form: {
+        type: Object,
         required: true,
     },
 })
-
-const form = props.for()
 </script>

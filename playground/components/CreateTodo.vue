@@ -1,10 +1,7 @@
 <template>
-    <Form
-        v-slot="{ form }"
-        :for="create"
-    >
+    <Form :form>
         <FormInput
-            :form="form"
+            :form
             name="title"
         >
             <input
@@ -44,4 +41,5 @@
 
 <script setup lang="ts">
 const { create } = useTodos
+const form = create()
 </script>
