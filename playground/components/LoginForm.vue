@@ -1,12 +1,12 @@
 <template>
     <div>
         <input
-            v-model="form.email"
+            v-model="fields.email"
             type="text"
             placeholder="Email"
         />
         <input
-            v-model="form.password"
+            v-model="fields.password"
             type="password"
             placeholder="Password"
         />
@@ -19,5 +19,5 @@
 import { useLaravelSanctum } from '#imports'
 
 const { login } = useLaravelSanctum()
-const { form, submit } = login
+const { fields, submit } = login
 </script>

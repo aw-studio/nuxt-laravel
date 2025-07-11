@@ -1,6 +1,6 @@
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { reactive, watch } from 'vue'
+import { reactive } from 'vue'
 import type { LaravelFormOptions } from '../types'
 import { useLaravelApi } from './useLaravelApi'
 
@@ -40,27 +40,36 @@ export function useLaravelForm<TForm extends Record<string, any>>(
         onSubmitError,
     } = options
 
-    const form = reactive({ ...initialValues })
-
     const formSchema = toTypedSchema(schema)
 
-    const { meta, values, setFieldValue, errors, errorBag, setFieldError } =
-        useForm({
-            validationSchema: formSchema,
-            initialValues,
-        })
+    const form = useForm({
+        validationSchema: formSchema,
+        initialValues,
+    })
 
-    watch(
-        () => form,
-        newValue => {
-            for (const key in newValue) {
-                setFieldValue(key, newValue[key])
-            }
-        },
-        { deep: true }
-    )
+    const { values, setFieldError, defineField, handleSubmit } = form
 
-    const submit = async () => {
+    /**
+     * Define reactive fields and their properties
+     * This will create a field for each key in the initialValues object
+     * and make them reactive so that they can be used in the template.
+     */
+    const fields: Record<string, any> = reactive({})
+    const fieldProps: Record<string, any> = reactive({})
+
+    for (const key in initialValues) {
+        // Define each field with its initial value
+        const [field, props] = defineField(key)
+        fields[key] = field
+        fieldProps[key] = props
+    }
+
+    /**
+     * Submit function that handles the form submission
+     * It uses the Laravel API client to send a POST or PUT request
+     * based on the method specified in the options.
+     */
+    const submit = handleSubmit(async () => {
         const { post, put } = useLaravelApi()
 
         try {
@@ -101,24 +110,12 @@ export function useLaravelForm<TForm extends Record<string, any>>(
 
             throw error
         }
-    }
-
-    // create a carbon copy of the initial values
-    const initialValuesCopy = { ...initialValues }
-
-    const isFieldTouched = (field: string) => {
-        return Object.keys(values).some(
-            key => key === field && values[key] !== initialValuesCopy[key]
-        )
-    }
+    })
 
     return {
-        form,
-        values,
-        meta,
-        errors,
-        errorBag,
+        ...form,
+        fields,
+        fieldProps,
         submit,
-        isFieldTouched,
     }
 }
