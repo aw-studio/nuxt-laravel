@@ -1,47 +1,70 @@
 <template>
-    <div>
-        <input
-            v-model="field"
-            type="text"
-        />
+    <div class="flex flex-col">
+        <label
+            v-if="label"
+            :for="name"
+            class="font-semibold mb-1"
+        >
+            {{ label }}
+            <span
+                v-if="meta.required"
+                class="text-red-500"
+            >
+                *
+            </span>
+        </label>
+        <div
+            class="w-full"
+            :class="{
+                'has-errors': showErrors,
+            }"
+        >
+            <slot />
+        </div>
         <div
             v-if="showErrors"
-            style="color: red"
+            class="text-red-500 text-sm"
         >
             {{ errors.join(', ') }}
         </div>
+        <div
+            v-if="hint"
+            class="text-sm text-gray-500"
+        >
+            {{ hint }}
+        </div>
+        <!-- <pre>{{ meta }}</pre> -->
     </div>
 </template>
 
 <script setup lang="ts">
+import { useField, type FormContext } from 'vee-validate'
+
 const props = defineProps({
     name: {
         type: String,
         required: true,
     },
     form: {
-        type: Object,
+        type: Object as PropType<FormContext>,
         required: true,
     },
-})
-
-/**
- * Reactive field that binds to the form's fields object.
- * This allows us to use v-model on the input and have it update the form's fields
- * by mutating the form's fields object directly.
- */
-const field = computed({
-    get() {
-        return props.form.fields[props.name]
+    label: {
+        type: String,
+        default: undefined,
     },
-    set(value) {
-        // eslint-disable-next-line vue/no-mutating-props
-        props.form.fields[props.name] = value
+    hint: {
+        type: String,
+        default: undefined,
     },
 })
 
 const errors = computed(() => {
     return props.form.errorBag.value[props.name] || []
+})
+
+const { meta } = useField(() => props.name, undefined, {
+    form: props.form,
 })
 
 const showErrors = computed(() => {

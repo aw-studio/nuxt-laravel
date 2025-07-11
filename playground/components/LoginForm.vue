@@ -1,27 +1,36 @@
 <template>
-    <Form :form>
-        <FormInput
+    <Form
+        :form
+        class="grid grid-cols-1 gap-4"
+    >
+        <FormField
             :form
             name="email"
+            label="Email"
+            hint="Your email address"
         >
-            <input
+            <FormInput
                 v-model="form.fields.email"
                 type="text"
                 placeholder="Email"
+                class="border p-2 rounded"
             />
-        </FormInput>
-        <FormInput
+        </FormField>
+        <FormField
             :form
             name="password"
+            label="Password"
+            hint="Your password"
         >
-            <input
+            <FormInput
                 v-model="form.fields.password"
                 type="password"
                 placeholder="Password"
+                class="border p-2 rounded"
             />
-        </FormInput>
+        </FormField>
 
-        <button>Login</button>
+        <button class="bg-black rounded-sm text-white p-2">Login</button>
     </Form>
 </template>
 

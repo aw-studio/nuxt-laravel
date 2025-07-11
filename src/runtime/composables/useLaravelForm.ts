@@ -1,6 +1,12 @@
-import { useForm } from 'vee-validate'
+import {
+    useForm,
+    useField,
+    type FieldMeta,
+    type FieldOptions,
+} from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { reactive } from 'vue'
+import type { Ref } from 'vue'
 import type { LaravelFormOptions } from '../types'
 import { useLaravelApi } from './useLaravelApi'
 
@@ -28,6 +34,10 @@ export type FormError = {
     }
 }
 
+export type Fields<T> = { [K in keyof T]: Ref<T[K]> }
+type FieldProps<T> = { [K in keyof T]: FieldOptions<T[K]> }
+export type FieldMetaMap<T> = { [K in keyof T]: FieldMeta<T[K]> }
+
 export function useLaravelForm<TForm extends Record<string, any>>(
     options: LaravelFormOptions<TForm>
 ) {
@@ -43,32 +53,29 @@ export function useLaravelForm<TForm extends Record<string, any>>(
     const formSchema = toTypedSchema(schema)
 
     const form = useForm({
+        name: `${submitUrl}__${method.toLowerCase()}`,
         validationSchema: formSchema,
         initialValues,
     })
 
     const { values, setFieldError, defineField, handleSubmit } = form
 
-    /**
-     * Define reactive fields and their properties
-     * This will create a field for each key in the initialValues object
-     * and make them reactive so that they can be used in the template.
-     */
-    const fields: Record<string, any> = reactive({})
-    const fieldProps: Record<string, any> = reactive({})
+    const fields = reactive({} as Fields<TForm>)
+    const fieldProps = reactive({} as FieldProps<TForm>)
+    const fieldMeta = reactive({} as FieldMetaMap<TForm>)
 
-    for (const key in initialValues) {
-        // Define each field with its initial value
-        const [field, props] = defineField(key)
+    for (const key of Object.keys(initialValues) as (keyof TForm)[]) {
+        const [field, props] = defineField(key as string)
+        const { meta } = useField(() => key as string)
+
+        // @ts-expect-error Type 'keyof TForm' cannot be used to index type 'Reactive<Fields<TForm>>'
         fields[key] = field
+        // @ts-expect-error Type 'keyof TForm' cannot be used to index type 'Reactive<FieldProps<TForm>>'
         fieldProps[key] = props
+        // @ts-expect-error Type 'keyof TForm' cannot be used to index type 'Reactive<FieldMetaMap<TForm>>'
+        fieldMeta[key] = meta
     }
 
-    /**
-     * Submit function that handles the form submission
-     * It uses the Laravel API client to send a POST or PUT request
-     * based on the method specified in the options.
-     */
     const submit = handleSubmit(async () => {
         const { post, put } = useLaravelApi()
 
@@ -116,6 +123,7 @@ export function useLaravelForm<TForm extends Record<string, any>>(
         ...form,
         fields,
         fieldProps,
+        fieldMeta,
         submit,
     }
 }

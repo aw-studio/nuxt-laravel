@@ -1,7 +1,9 @@
 <template>
     <Form :form>
-        <FormInput
+        <FormField
             :form
+            label="Title"
+            hint="The title of the todo"
             name="title"
         >
             <input
@@ -9,12 +11,7 @@
                 type="text"
                 placeholder="Title"
             />
-        </FormInput>
-
-        <!-- <FormInput
-            :form="form"
-            name="description"
-        /> -->
+        </FormField>
 
         <div>
             <h3>Subtasks</h3>

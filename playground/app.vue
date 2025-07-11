@@ -5,9 +5,19 @@
 </template>
 
 <script setup>
-// const { $echo } = useNuxtApp()
-
-onMounted(() => {
-    // $echo.private('users.1')
+useHead({
+    title: 'Nuxt Laravel Playground',
+    meta: [
+        {
+            name: 'description',
+            content: 'A playground for Nuxt and Laravel integration',
+        },
+    ],
+    link: [
+        {
+            rel: 'stylesheet',
+            href: 'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css',
+        },
+    ],
 })
 </script>
