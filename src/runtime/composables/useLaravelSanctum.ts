@@ -19,18 +19,20 @@ export const useLaravelSanctum = () => {
         password: z.string().min(6),
     })
 
-    const login = useLaravelForm<LoginForm>({
-        initialValues: {
-            email: '',
-            password: '',
-        },
-        submitUrl: '/login',
-        schema: loginSchema,
-        onSubmitSuccess: async () => {
-            const redirectTo = config.sanctum?.redirectAuthenticated || '/'
-            await router.push(redirectTo)
-        },
-    })
+    const login = () => {
+        return useLaravelForm<LoginForm>({
+            initialValues: {
+                email: '',
+                password: '',
+            },
+            submitUrl: '/login',
+            schema: loginSchema,
+            onSubmitSuccess: async () => {
+                const redirectTo = config.sanctum?.redirectAuthenticated || '/'
+                await router.push(redirectTo)
+            },
+        })
+    }
 
     const registerSchema = z.object({
         name: z.string().min(1),
@@ -39,20 +41,22 @@ export const useLaravelSanctum = () => {
         password_confirmation: z.string().min(6),
     })
 
-    const register = useLaravelForm<RegisterRequest>({
-        initialValues: {
-            name: '',
-            email: '',
-            password: '',
-            password_confirmation: '',
-        },
-        submitUrl: '/register',
-        schema: registerSchema,
-        onSubmitSuccess: async () => {
-            const redirectTo = config.sanctum?.redirectAuthenticated || '/'
-            await router.push(redirectTo)
-        },
-    })
+    const register = () => {
+        return useLaravelForm<RegisterRequest>({
+            initialValues: {
+                name: '',
+                email: '',
+                password: '',
+                password_confirmation: '',
+            },
+            submitUrl: '/register',
+            schema: registerSchema,
+            onSubmitSuccess: async () => {
+                const redirectTo = config.sanctum?.redirectAuthenticated || '/'
+                await router.push(redirectTo)
+            },
+        })
+    }
 
     const logout = async () => {
         try {

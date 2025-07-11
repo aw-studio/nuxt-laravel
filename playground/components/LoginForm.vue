@@ -1,23 +1,33 @@
 <template>
-    <div>
-        <input
-            v-model="fields.email"
-            type="text"
-            placeholder="Email"
-        />
-        <input
-            v-model="fields.password"
-            type="password"
-            placeholder="Password"
-        />
+    <Form :form>
+        <FormInput
+            :form
+            name="email"
+        >
+            <input
+                v-model="form.fields.email"
+                type="text"
+                placeholder="Email"
+            />
+        </FormInput>
+        <FormInput
+            :form
+            name="password"
+        >
+            <input
+                v-model="form.fields.password"
+                type="password"
+                placeholder="Password"
+            />
+        </FormInput>
 
-        <button @click="submit()">Login</button>
-    </div>
+        <button>Login</button>
+    </Form>
 </template>
 
 <script setup lang="ts">
 import { useLaravelSanctum } from '#imports'
 
 const { login } = useLaravelSanctum()
-const { fields, submit } = login
+const form = login()
 </script>
