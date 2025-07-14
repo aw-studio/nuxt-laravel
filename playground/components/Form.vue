@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/multi-word-component-names -->
 <template>
     <form @submit.prevent="form.submit()">
         <slot :form="form" />
