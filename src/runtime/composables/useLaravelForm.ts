@@ -77,13 +77,22 @@ export function useLaravelForm<TForm extends Record<string, any>>(
     }
 
     const submit = handleSubmit(async () => {
-        const { post, put } = useLaravelApi()
+        const { post, put, patch, destroy } = useLaravelApi()
 
         try {
-            const response =
-                method === 'POST'
-                    ? await post(submitUrl, values)
-                    : await put(submitUrl, values)
+            let response
+            if (method === 'POST') {
+                response = await post(submitUrl, values)
+            } else if (method === 'PUT') {
+                response = await put(submitUrl, values)
+            } else if (method === 'PATCH') {
+                response = await patch(submitUrl, values)
+            } else if (method === 'DELETE') {
+                response = await destroy(submitUrl, values)
+            } else {
+                throw new Error(`Unsupported method: ${method}`)
+            }
+
             if (onSubmitSuccess) {
                 onSubmitSuccess(response)
             }

@@ -15,7 +15,18 @@
                 prev
             </button>
         </div>
-        <pre>{{ items }}</pre>
+
+        <div>
+            <ul>
+                <li
+                    v-for="todo in items"
+                    :key="todo.id"
+                >
+                    {{ todo.title }}
+                    <DeleteTodo :todo="todo" />
+                </li>
+            </ul>
+        </div>
     </div>
 </template>
 

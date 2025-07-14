@@ -121,7 +121,7 @@ export type LaravelFormOptions<TForm extends Record<string, any>> = {
     initialValues: TForm
     submitUrl: string
     schema: ZodObject<ZodRawShape>
-    method?: 'POST' | 'PUT'
+    method?: 'POST' | 'PUT' | 'PATCH' | 'DELETE'
     onSubmitSuccess?: (response: any) => void
     onSubmitError?: (error: any) => void
 }

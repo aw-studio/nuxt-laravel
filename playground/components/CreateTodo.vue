@@ -32,7 +32,6 @@
         </div>
 
         <button>Create</button>
-        <pre>{{ form }}</pre>
     </Form>
 </template>
 

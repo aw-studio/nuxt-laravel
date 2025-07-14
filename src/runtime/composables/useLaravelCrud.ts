@@ -19,7 +19,7 @@ export function useLaravelCrud<
     } = params
 
     const show = async (id: string, showEndpoint?: string) =>
-        useLaravelGet<TModel>(`${showEndpoint || endpoint}/${id}`)
+        useLaravelGet<TModel>(showEndpoint || `${endpoint}/${id}`)
     const index = (options?: any, indexEndpoint?: string) =>
         useLaravelIndex<TModel>(indexEndpoint || endpoint, options)
 
@@ -36,9 +36,19 @@ export function useLaravelCrud<
     const update = (model: TForm, updateEndpoint?: string) =>
         useLaravelForm<TForm>({
             initialValues: model,
-            submitUrl: `${updateEndpoint || endpoint}/${model.id}`,
+            submitUrl: updateEndpoint || `${endpoint}/${model.id}`,
             schema: updateSchema || schema,
             method: 'PUT',
+            onSubmitSuccess: onUpdateSuccess,
+            onSubmitError: onUpdateError,
+        })
+
+    const destroy = (model: TForm, destroyEndpoint?: string) =>
+        useLaravelForm<TForm>({
+            initialValues: model,
+            submitUrl: destroyEndpoint || `${endpoint}/${model.id}`,
+            schema: updateSchema || schema,
+            method: 'DELETE',
             onSubmitSuccess: onUpdateSuccess,
             onSubmitError: onUpdateError,
         })
@@ -48,6 +58,7 @@ export function useLaravelCrud<
         index,
         create,
         update,
+        destroy,
     }
 }
 

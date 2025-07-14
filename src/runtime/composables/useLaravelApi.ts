@@ -59,6 +59,18 @@ export const useLaravelApi = () => {
             ...options,
         })
     }
+    const patch = async (url: string, body: any, options: any = {}) => {
+        return await ofetch(getApiUrl(url), {
+            method: 'PATCH',
+            headers: {
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': xsrfToken || '',
+            },
+            body,
+            credentials: 'include',
+            ...options,
+        })
+    }
     const destroy = async (url: string, options: any = {}) => {
         return await ofetch(getApiUrl(url), {
             method: 'DELETE',
@@ -76,7 +88,8 @@ export const useLaravelApi = () => {
         get,
         post,
         put,
-        delete: destroy,
+        patch,
+        destroy,
     }
 
     return {
@@ -84,7 +97,8 @@ export const useLaravelApi = () => {
         get,
         post,
         put,
-        delete: destroy,
+        patch,
+        destroy,
         client,
     }
 }
