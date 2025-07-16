@@ -136,3 +136,27 @@ export type LaravelFormOptions<TForm extends Record<string, any>> = {
 //     password: string
 //     password_confirmation: string
 // }
+
+export type ErrorBag = {
+    [key: string]: string | string[]
+}
+export type ValidationError = {
+    errors: ErrorBag
+}
+
+export type ExceptionError = {
+    exception: string
+    file: string
+    line: number
+    message: string
+}
+export type FormError = {
+    response: {
+        data?: ValidationError | ExceptionError
+        _data?: ValidationError | ExceptionError
+        ok: boolean
+        status: number
+        statusText: string
+        url: string
+    }
+}

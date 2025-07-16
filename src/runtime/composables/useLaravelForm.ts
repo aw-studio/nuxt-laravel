@@ -1,38 +1,14 @@
 import {
     useForm,
-    // useField,
+    useField,
     // type FieldMeta,
     // type FieldOptions,
 } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-// import { reactive } from 'vue'
+import { reactive } from 'vue'
 // import type { Ref } from 'vue'
-import type { LaravelFormOptions } from '../types'
+import type { ErrorBag, FormError, LaravelFormOptions } from '../types'
 import { useLaravelApi } from './useLaravelApi'
-
-export type ErrorBag = {
-    [key: string]: string | string[]
-}
-export type ValidationError = {
-    errors: ErrorBag
-}
-
-export type ExceptionError = {
-    exception: string
-    file: string
-    line: number
-    message: string
-}
-export type FormError = {
-    response: {
-        data?: ValidationError | ExceptionError
-        _data?: ValidationError | ExceptionError
-        ok: boolean
-        status: number
-        statusText: string
-        url: string
-    }
-}
 
 // export type Fields<T> = { [K in keyof T]: Ref<T[K]> }
 // export type FieldProps<T> = { [K in keyof T]: FieldOptions<T[K]> }
@@ -58,27 +34,23 @@ export function useLaravelForm<TForm extends Record<string, any>>(
         initialValues,
     })
 
-    const {
-        values,
-        setFieldError,
-        // defineField,
-        handleSubmit,
-    } = form
+    const { values, setFieldError, defineField, handleSubmit } = form
 
-    // const fields = reactive({})
-    // const fieldProps = reactive({})
-    // // const fieldMeta = reactive({})
+    const fields = reactive({})
+    const fieldProps = reactive({})
+    const fieldMeta = reactive({})
 
-    // for (const key of Object.keys(initialValues) as (keyof TForm)[]) {
-    //     const [field, props] = defineField(key as string)
-    //     // const { meta } = useField(() => key as string)
+    for (const key of Object.keys(initialValues) as (keyof TForm)[]) {
+        const [field, props] = defineField(key as string)
+        const { meta } = useField(() => key as string)
 
-    //     // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
-    //     fields[key] = field
-    //     // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
-    //     fieldProps[key] = props
-    //     // fieldMeta[key] = meta
-    // }
+        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
+        fields[key] = field
+        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
+        fieldProps[key] = props
+        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
+        fieldMeta[key] = meta
+    }
 
     const submit = handleSubmit(async () => {
         const { post, put, patch, destroy } = useLaravelApi()
@@ -101,9 +73,9 @@ export function useLaravelForm<TForm extends Record<string, any>>(
                 onSubmitSuccess(response)
             }
             return response
-        } catch (error: FormError | any) {
+        } catch (error: any) {
             if (onSubmitError) {
-                onSubmitError(error)
+                onSubmitError(error as FormError)
             }
 
             /**
@@ -134,9 +106,9 @@ export function useLaravelForm<TForm extends Record<string, any>>(
 
     return {
         ...form,
-        // fields,
-        // fieldProps,
-        // fieldMeta,
+        fields,
+        fieldProps,
+        fieldMeta,
         submit,
     }
 }
