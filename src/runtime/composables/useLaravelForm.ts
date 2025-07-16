@@ -14,9 +14,18 @@ import { useLaravelApi } from './useLaravelApi'
 // export type FieldProps<T> = { [K in keyof T]: FieldOptions<T[K]> }
 // export type FieldMetaMap<T> = { [K in keyof T]: FieldMeta<T[K]> }
 
+export type LaravelForm<TForm extends Record<string, any>> = ReturnType<
+    typeof useForm<TForm>
+> & {
+    fields: { [K in keyof TForm]: any }
+    fieldProps: { [K in keyof TForm]: any }
+    fieldMeta: { [K in keyof TForm]: any }
+    submit: () => Promise<any>
+}
+
 export function useLaravelForm<TForm extends Record<string, any>>(
     options: LaravelFormOptions<TForm>
-) {
+): LaravelForm<TForm> {
     const {
         initialValues,
         submitUrl,
@@ -36,19 +45,18 @@ export function useLaravelForm<TForm extends Record<string, any>>(
 
     const { values, setFieldError, defineField, handleSubmit } = form
 
-    const fields = reactive({})
-    const fieldProps = reactive({})
-    const fieldMeta = reactive({})
+    const fields = reactive({}) as {
+        [K in keyof TForm]: any
+    }
+    const fieldProps = reactive({}) as { [K in keyof TForm]: any }
+    const fieldMeta = reactive({}) as { [K in keyof TForm]: any }
 
     for (const key of Object.keys(initialValues) as (keyof TForm)[]) {
         const [field, props] = defineField(key as string)
         const { meta } = useField(() => key as string)
 
-        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
         fields[key] = field
-        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
         fieldProps[key] = props
-        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
         fieldMeta[key] = meta
     }
 
@@ -105,10 +113,10 @@ export function useLaravelForm<TForm extends Record<string, any>>(
     })
 
     return {
-        ...form,
+        ...(form as ReturnType<typeof useForm<TForm>>),
         fields,
         fieldProps,
         fieldMeta,
         submit,
-    }
+    } as LaravelForm<TForm>
 }
