@@ -1,6 +1,10 @@
 # Changelog
 
 
+## v0.0.24
+
+[compare changes](https://github.com/aw-studio/nuxt-laravel/compare/v0.0.23...v0.0.24)
+
 ## v0.0.23
 
 [compare changes](https://github.com/aw-studio/nuxt-laravel/compare/v0.0.22...v0.0.23)
