@@ -10,30 +10,10 @@ const MODULE_NAME = 'laravel'
 
 export type ModuleOptions = {
     baseUrl: string
-    sanctum?: {
-        redirectAuthenticated: string
-        redirectUnauthenticated: string
-    }
-    // reverb?: {
-    //     appKey?: string
-    //     host?: string
-    //     wsPort?: number
-    //     wssPort?: number
-    // }
 }
 
 const defaultModuleOptions: ModuleOptions = {
     baseUrl: 'http://localhost:8000',
-    sanctum: {
-        redirectAuthenticated: '',
-        redirectUnauthenticated: '',
-    },
-    // reverb: {
-    //     appKey: undefined,
-    //     host: undefined,
-    //     wsPort: undefined,
-    //     wssPort: undefined,
-    // },
 }
 
 export * from './runtime/types/index'
