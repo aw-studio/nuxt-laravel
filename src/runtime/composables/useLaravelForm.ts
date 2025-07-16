@@ -1,6 +1,6 @@
 import {
     useForm,
-    useField,
+    // useField,
     // type FieldMeta,
     // type FieldOptions,
 } from 'vee-validate'
@@ -62,18 +62,17 @@ export function useLaravelForm<TForm extends Record<string, any>>(
 
     const fields = reactive({})
     const fieldProps = reactive({})
-    const fieldMeta = reactive({})
+    // const fieldMeta = reactive({})
 
     for (const key of Object.keys(initialValues) as (keyof TForm)[]) {
         const [field, props] = defineField(key as string)
-        const { meta } = useField(() => key as string)
+        // const { meta } = useField(() => key as string)
 
         // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
         fields[key] = field
         // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
         fieldProps[key] = props
-        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
-        fieldMeta[key] = meta
+        // fieldMeta[key] = meta
     }
 
     const submit = handleSubmit(async () => {
@@ -132,7 +131,7 @@ export function useLaravelForm<TForm extends Record<string, any>>(
         ...form,
         fields,
         fieldProps,
-        fieldMeta,
+        // fieldMeta,
         submit,
     }
 }
