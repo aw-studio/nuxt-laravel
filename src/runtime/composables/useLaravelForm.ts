@@ -1,12 +1,12 @@
 import {
     useForm,
     useField,
-    type FieldMeta,
-    type FieldOptions,
+    // type FieldMeta,
+    // type FieldOptions,
 } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { reactive } from 'vue'
-import type { Ref } from 'vue'
+// import type { Ref } from 'vue'
 import type { LaravelFormOptions } from '../types'
 import { useLaravelApi } from './useLaravelApi'
 
@@ -34,9 +34,9 @@ export type FormError = {
     }
 }
 
-export type Fields<T> = { [K in keyof T]: Ref<T[K]> }
-type FieldProps<T> = { [K in keyof T]: FieldOptions<T[K]> }
-export type FieldMetaMap<T> = { [K in keyof T]: FieldMeta<T[K]> }
+// export type Fields<T> = { [K in keyof T]: Ref<T[K]> }
+// export type FieldProps<T> = { [K in keyof T]: FieldOptions<T[K]> }
+// export type FieldMetaMap<T> = { [K in keyof T]: FieldMeta<T[K]> }
 
 export function useLaravelForm<TForm extends Record<string, any>>(
     options: LaravelFormOptions<TForm>
@@ -60,19 +60,19 @@ export function useLaravelForm<TForm extends Record<string, any>>(
 
     const { values, setFieldError, defineField, handleSubmit } = form
 
-    const fields = reactive({} as Fields<TForm>)
-    const fieldProps = reactive({} as FieldProps<TForm>)
-    const fieldMeta = reactive({} as FieldMetaMap<TForm>)
+    const fields = reactive({})
+    const fieldProps = reactive({})
+    const fieldMeta = reactive({})
 
     for (const key of Object.keys(initialValues) as (keyof TForm)[]) {
         const [field, props] = defineField(key as string)
         const { meta } = useField(() => key as string)
 
-        // @ts-expect-error Type 'keyof TForm' cannot be used to index type 'Reactive<Fields<TForm>>'
+        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
         fields[key] = field
-        // @ts-expect-error Type 'keyof TForm' cannot be used to index type 'Reactive<FieldProps<TForm>>'
+        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
         fieldProps[key] = props
-        // @ts-expect-error Type 'keyof TForm' cannot be used to index type 'Reactive<FieldMetaMap<TForm>>'
+        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type '{}'.ts(2536)
         fieldMeta[key] = meta
     }
 

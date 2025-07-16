@@ -1,9 +1,9 @@
 import { ofetch } from 'ofetch'
-import { useRuntimeConfig, useCookie } from 'nuxt/app'
-import type { ModuleOptions } from '~/src/module'
+import { useCookie } from 'nuxt/app'
+import { useLaravelConfig } from '#imports'
 
 export const useLaravelApi = () => {
-    const config = useRuntimeConfig().public.laravel as ModuleOptions
+    const config = useLaravelConfig()
 
     const xsrfToken = useCookie('XSRF-TOKEN').value
 

@@ -36,6 +36,15 @@ const defaultModuleOptions: ModuleOptions = {
     // },
 }
 
+export * from './runtime/types/index'
+
+export type {
+    ErrorBag,
+    ValidationError,
+    FormError,
+    ExceptionError,
+} from './runtime/composables/useLaravelForm'
+
 export default defineNuxtModule<ModuleOptions>({
     meta: {
         name: MODULE_NAME,
