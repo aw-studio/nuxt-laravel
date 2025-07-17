@@ -3,6 +3,7 @@ import {
     useField,
     // type FieldMeta,
     // type FieldOptions,
+    InvalidSubmissionContext,
 } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { reactive } from 'vue'
@@ -60,57 +61,66 @@ export function useLaravelForm<TForm extends Record<string, any>>(
         fieldMeta[key] = meta
     }
 
-    const submit = handleSubmit(async () => {
-        const { post, put, patch, destroy } = useLaravelApi()
+    const submit = handleSubmit(
+        async () => {
+            const { post, put, patch, destroy } = useLaravelApi()
 
-        try {
-            let response
-            if (method === 'POST') {
-                response = await post(submitUrl, values)
-            } else if (method === 'PUT') {
-                response = await put(submitUrl, values)
-            } else if (method === 'PATCH') {
-                response = await patch(submitUrl, values)
-            } else if (method === 'DELETE') {
-                response = await destroy(submitUrl, values)
-            } else {
-                throw new Error(`Unsupported method: ${method}`)
-            }
+            try {
+                let response
+                if (method === 'POST') {
+                    response = await post(submitUrl, values)
+                } else if (method === 'PUT') {
+                    response = await put(submitUrl, values)
+                } else if (method === 'PATCH') {
+                    response = await patch(submitUrl, values)
+                } else if (method === 'DELETE') {
+                    response = await destroy(submitUrl, values)
+                } else {
+                    throw new Error(`Unsupported method: ${method}`)
+                }
 
-            if (onSubmitSuccess) {
-                onSubmitSuccess(response)
-            }
-            return response
-        } catch (error: any) {
-            if (onSubmitError) {
-                onSubmitError(error as FormError)
-            }
+                if (onSubmitSuccess) {
+                    onSubmitSuccess(response)
+                }
+                return response
+            } catch (error: any) {
+                if (onSubmitError) {
+                    onSubmitError(error as FormError)
+                }
 
-            /**
-             * Handle validation errors
-             */
-            if (error.response?.data?.errors || error.response?._data?.errors) {
-                const validationError: ErrorBag =
-                    error.response.data?.errors || error.response._data?.errors
+                /**
+                 * Handle validation errors
+                 */
+                if (
+                    error.response?.data?.errors ||
+                    error.response?._data?.errors
+                ) {
+                    const validationError: ErrorBag =
+                        error.response.data?.errors ||
+                        error.response._data?.errors
 
-                for (const field in validationError) {
-                    const errorMessages = validationError[field]
+                    for (const field in validationError) {
+                        const errorMessages = validationError[field]
 
-                    if (Array.isArray(errorMessages)) {
-                        errorMessages.forEach(message => {
-                            // If it's an array, set each error message for the field
-                            setFieldError(field, message)
-                        })
-                    } else {
-                        // If it's not an array, set it directly
-                        setFieldError(field, errorMessages)
+                        if (Array.isArray(errorMessages)) {
+                            errorMessages.forEach(message => {
+                                // If it's an array, set each error message for the field
+                                setFieldError(field, message)
+                            })
+                        } else {
+                            // If it's not an array, set it directly
+                            setFieldError(field, errorMessages)
+                        }
                     }
                 }
-            }
 
-            throw error
+                throw error
+            }
+        },
+        (context: InvalidSubmissionContext) => {
+            throw context
         }
-    })
+    )
 
     return {
         ...(form as ReturnType<typeof useForm<TForm>>),
