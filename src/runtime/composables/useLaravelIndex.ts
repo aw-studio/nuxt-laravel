@@ -88,6 +88,10 @@ export function useLaravelIndex<T extends object>(
                 state.value.items = []
             }
             state.value.error = e.response._data
+
+            if (options?.onError) {
+                options.onError(e)
+            }
         } finally {
             state.value.loading = false
         }

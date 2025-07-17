@@ -46,6 +46,8 @@ export type LaravelIndexOptions = {
     syncUrl?: boolean
     sort?: string
     ssr?: boolean
+    onError?: (error: any) => void
+    onSuccess?: (response: IndexResponse<any>) => void
 }
 
 export type FilterOperatorOption =
