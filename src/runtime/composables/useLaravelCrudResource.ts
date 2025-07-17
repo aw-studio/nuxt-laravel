@@ -1,8 +1,8 @@
+import type { ZodObject, ZodRawShape } from 'zod'
 import type { LaravelGetOptions, LaravelIndexOptions } from '../types'
 import { useLaravelIndex } from './useLaravelIndex'
 import { useLaravelGet } from './useLaravelGet'
 import { useLaravelForm } from './useLaravelForm'
-import { ZodObject, ZodRawShape } from 'zod'
 
 type CrudOperation = 'create' | 'update' | 'delete' | 'show' | 'index'
 
