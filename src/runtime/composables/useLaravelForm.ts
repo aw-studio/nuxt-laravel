@@ -3,7 +3,7 @@ import {
     useField,
     type FieldMeta,
     type FieldOptions,
-    InvalidSubmissionContext,
+    type InvalidSubmissionContext,
 } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { reactive } from 'vue'
