@@ -37,24 +37,20 @@ type CrudResourceConfig<TCreateForm, TUpdateForm, TDeleteForm> = {
 }
 
 type BuildEndpointParams = {
-    operation: CrudOperation
     id?: string | number
     urlPrefix?: string
 }
 
 type GetOperationConfigParams = {
-    operation: CrudOperation
     id?: string | number
     urlPrefix?: string
 }
 
 type CrudIndexParams = {
     urlPrefix?: string
-    options?: LaravelIndexOptions
 }
 
 type CrudShowParams = {
-    id: string | number
     options?: LaravelGetOptions
     urlPrefix?: string
 }
@@ -69,49 +65,64 @@ export function useLaravelCrudResource<
     TUpdateForm extends Record<string, any> = TCreateForm,
     TDeleteForm extends Record<string, any> | null = null
 >(config: CrudResourceConfig<TCreateForm, TUpdateForm, TDeleteForm>) {
-    const buildEndpoint = (params: BuildEndpointParams): string => {
-        const { operation, id, urlPrefix } = params
-
+    const buildEndpoint = (
+        operation: CrudOperation,
+        params: BuildEndpointParams
+    ): string => {
+        const { id, urlPrefix } = params
         const operationConfig = config[operation] as
             | CrudOperationConfig<any>
             | undefined
 
-        if (urlPrefix) {
-            return `${urlPrefix}/${operationConfig?.endpoint ?? ''}`.replace(
-                /\/+/g,
-                '/'
-            )
-        }
+        const joinPaths = (...parts: (string | undefined)[]) =>
+            parts.filter(Boolean).join('/').replace(/\/+/g, '/')
 
         if (operationConfig?.endpoint) {
-            if (id) {
-                return operationConfig.endpoint.replace(':id', String(id))
+            const endpoint = operationConfig.endpoint
+
+            if (endpoint.includes(':id')) {
+                if (!id) {
+                    throw new Error(
+                        `Missing 'id' for operation endpoint: ${endpoint}`
+                    )
+                }
+                return joinPaths(urlPrefix, endpoint.replace(':id', String(id)))
             }
-            return operationConfig.endpoint
+
+            return joinPaths(urlPrefix, endpoint)
         }
 
-        if (!config.config.endpoint) {
+        const baseEndpoint = config.config.endpoint
+        if (!baseEndpoint) {
             throw new Error(
                 `No endpoint configured for ${operation} and no default endpoint in config`
             )
         }
 
-        const baseEndpoint = config.config.endpoint
-        if (['update', 'show', 'delete'].includes(operation)) {
-            return `${baseEndpoint}/${id}`
+        const needsId = ['update', 'show', 'delete'].includes(operation)
+        if (needsId && !id) {
+            throw new Error(`Missing 'id' for operation "${operation}"`)
         }
-        return baseEndpoint
+
+        return joinPaths(
+            urlPrefix,
+            baseEndpoint,
+            needsId ? String(id) : undefined
+        )
     }
 
-    const getOperationConfig = <TForm>(params: GetOperationConfigParams) => {
-        const { operation, id, urlPrefix } = params
+    const getOperationConfig = <TForm>(
+        operation: CrudOperation,
+        params: GetOperationConfigParams
+    ) => {
+        const { id, urlPrefix } = params
 
         const operationConfig = config[operation] as
             | CrudOperationConfig<TForm>
             | undefined
 
         return {
-            endpoint: buildEndpoint({ operation, id, urlPrefix }),
+            endpoint: buildEndpoint(operation, { id, urlPrefix }),
             schema: operationConfig?.schema ?? config.config.schema,
             initialValues:
                 operationConfig?.initialValues ?? config.config.initialValues,
@@ -120,23 +131,21 @@ export function useLaravelCrudResource<
         }
     }
 
-    const index = (params: CrudIndexParams) => {
-        const indexOptions = params.options ?? config.index?.options
+    const index = (options?: LaravelIndexOptions, params?: CrudIndexParams) => {
+        const indexOptions = options ?? config.index?.options
         return useLaravelIndex<TModel>(
-            buildEndpoint({
-                operation: 'index',
-                urlPrefix: params.urlPrefix,
+            buildEndpoint('index', {
+                urlPrefix: params?.urlPrefix,
             }),
             indexOptions
         )
     }
 
-    const show = async (params: CrudShowParams) => {
+    const show = async (id: string | number, params: CrudShowParams) => {
         const showOptions = params.options ?? config.show?.options
         return useLaravelGet<TModel>(
-            buildEndpoint({
-                operation: 'show',
-                id: params.id,
+            buildEndpoint('show', {
+                id,
                 urlPrefix: params.urlPrefix,
             }),
             showOptions
@@ -145,8 +154,7 @@ export function useLaravelCrudResource<
 
     const create = (params: CrudCreateParams) => {
         const { endpoint, schema, initialValues, onSuccess, onError } =
-            getOperationConfig<TCreateForm>({
-                operation: 'create',
+            getOperationConfig<TCreateForm>('create', {
                 urlPrefix: params.urlPrefix,
             })
 
@@ -162,8 +170,7 @@ export function useLaravelCrudResource<
 
     const update = (model: TUpdateForm & { id: string | number }) => {
         const { endpoint, schema, onSuccess, onError } =
-            getOperationConfig<TUpdateForm>({
-                operation: 'update',
+            getOperationConfig<TUpdateForm>('update', {
                 id: model.id,
             })
 
@@ -179,8 +186,7 @@ export function useLaravelCrudResource<
 
     const destroy = (id: string | number) => {
         const operationConfig = config.delete
-        const endpoint = buildEndpoint({
-            operation: 'delete',
+        const endpoint = buildEndpoint('delete', {
             id,
         })
 
