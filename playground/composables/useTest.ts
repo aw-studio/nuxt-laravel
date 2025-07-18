@@ -18,7 +18,7 @@ export const useTest = useLaravelCrudResource<
     UpdateTestForm
 >({
     config: {
-        endpoint: '/api/tests',
+        endpoint: '/tests',
         initialValues: {
             foo: 'Initial Foo Value',
         },
@@ -27,7 +27,6 @@ export const useTest = useLaravelCrudResource<
         }),
     },
     create: {
-        endpoint: '/api/tests/create',
         initialValues: {
             foo: 'Create Foo Value',
         },
@@ -36,7 +35,6 @@ export const useTest = useLaravelCrudResource<
         }),
     },
     update: {
-        endpoint: '/api/tests/update',
         initialValues: {
             bar: 'Update Bar Value',
         },
@@ -45,7 +43,7 @@ export const useTest = useLaravelCrudResource<
         }),
     },
     show: {
-        endpoint: '/api/tests/show',
+        endpoint: 'bar/baz/:id/boom',
     },
     index: {
         endpoint: '/api/tests/index',
