@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.0.28
+
+[compare changes](https://github.com/aw-studio/nuxt-laravel/compare/v0.0.27...v0.0.28)
+
+### 🚀 Enhancements
+
+- Implement useLaravelCrudResource composable for CRUD operations ([9e18498](https://github.com/aw-studio/nuxt-laravel/commit/9e18498))
+
+### 🩹 Fixes
+
+- Lint ([a5c72da](https://github.com/aw-studio/nuxt-laravel/commit/a5c72da))
+
+### ❤️ Contributors
+
+- Lukas Heller <dev@lukas-heller.de>
+
 ## v0.0.27
 
 [compare changes](https://github.com/aw-studio/nuxt-laravel/compare/v0.0.26...v0.0.27)
