@@ -70,35 +70,35 @@ export function useLaravelCrudResource<
     TDeleteForm extends Record<string, any> | null = null
 >(config: CrudResourceConfig<TCreateForm, TUpdateForm, TDeleteForm>) {
     const buildEndpoint = (params: BuildEndpointParams): string => {
-        const operationConfig = config[params.operation] as
+        const { operation, id, urlPrefix } = params
+
+        const operationConfig = config[operation] as
             | CrudOperationConfig<any>
             | undefined
 
-        if (params.urlPrefix) {
-            return `${params.urlPrefix}/${
-                operationConfig?.endpoint ?? ''
-            }`.replace(/\/+/g, '/')
+        if (urlPrefix) {
+            return `${urlPrefix}/${operationConfig?.endpoint ?? ''}`.replace(
+                /\/+/g,
+                '/'
+            )
         }
 
         if (operationConfig?.endpoint) {
-            if (params.id) {
-                return operationConfig.endpoint.replace(
-                    ':id',
-                    String(params.id)
-                )
+            if (id) {
+                return operationConfig.endpoint.replace(':id', String(id))
             }
             return operationConfig.endpoint
         }
 
         if (!config.config.endpoint) {
             throw new Error(
-                `No endpoint configured for ${params.operation} and no default endpoint in config`
+                `No endpoint configured for ${operation} and no default endpoint in config`
             )
         }
 
         const baseEndpoint = config.config.endpoint
-        if (['update', 'show', 'delete'].includes(params.operation)) {
-            return `${baseEndpoint}/${params.id}`
+        if (['update', 'show', 'delete'].includes(operation)) {
+            return `${baseEndpoint}/${id}`
         }
         return baseEndpoint
     }
