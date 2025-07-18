@@ -34,7 +34,7 @@ export function useLaravelForm<TForm extends Record<string, any>>(
         onSubmitError,
     } = options
 
-    const formSchema = toTypedSchema(schema)
+    const formSchema = schema ? toTypedSchema(schema) : undefined
 
     const form = useForm({
         name: `${submitUrl}__${method.toLowerCase()}`,
