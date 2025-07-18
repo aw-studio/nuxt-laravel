@@ -59,6 +59,14 @@ type CrudCreateParams = {
     urlPrefix?: string
 }
 
+type CrudUpdateParams = {
+    urlPrefix?: string
+}
+
+type CrudDeleteParams = {
+    urlPrefix?: string
+}
+
 export function useLaravelCrudResource<
     TModel extends Record<string, any>,
     TCreateForm extends Record<string, any>,
@@ -168,10 +176,14 @@ export function useLaravelCrudResource<
         })
     }
 
-    const update = (model: TUpdateForm & { id: string | number }) => {
+    const update = (
+        model: TUpdateForm & { id: string | number },
+        params?: CrudUpdateParams
+    ) => {
         const { endpoint, schema, onSuccess, onError } =
             getOperationConfig<TUpdateForm>('update', {
                 id: model.id,
+                urlPrefix: params?.urlPrefix,
             })
 
         return useLaravelForm<TUpdateForm>({
@@ -184,10 +196,11 @@ export function useLaravelCrudResource<
         })
     }
 
-    const destroy = (id: string | number) => {
+    const destroy = (id: string | number, params?: CrudDeleteParams) => {
         const operationConfig = config.delete
         const endpoint = buildEndpoint('delete', {
             id,
+            urlPrefix: params?.urlPrefix,
         })
 
         // @ts-expect-error: TDeleteForm can be null, but we need to ensure it is a Record<string, any> for useLaravelForm
