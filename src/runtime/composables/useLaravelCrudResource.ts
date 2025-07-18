@@ -149,21 +149,21 @@ export function useLaravelCrudResource<
         )
     }
 
-    const show = async (id: string | number, params: CrudShowParams) => {
-        const showOptions = params.options ?? config.show?.options
+    const show = async (id: string | number, params?: CrudShowParams) => {
+        const showOptions = params?.options ?? config.show?.options
         return useLaravelGet<TModel>(
             buildEndpoint('show', {
                 id,
-                urlPrefix: params.urlPrefix,
+                urlPrefix: params?.urlPrefix,
             }),
             showOptions
         )
     }
 
-    const create = (params: CrudCreateParams) => {
+    const create = (params?: CrudCreateParams) => {
         const { endpoint, schema, initialValues, onSuccess, onError } =
             getOperationConfig<TCreateForm>('create', {
-                urlPrefix: params.urlPrefix,
+                urlPrefix: params?.urlPrefix,
             })
 
         return useLaravelForm<TCreateForm>({
