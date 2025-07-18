@@ -122,7 +122,7 @@ export type CrudParams<TForm> = {
 export type LaravelFormOptions<TForm extends Record<string, any>> = {
     initialValues: TForm
     submitUrl: string
-    schema: ZodObject<ZodRawShape>
+    schema: ZodObject<ZodRawShape> | undefined
     method?: 'POST' | 'PUT' | 'PATCH' | 'DELETE'
     onSubmitSuccess?: (response: any) => void
     onSubmitError?: (error: any) => void
