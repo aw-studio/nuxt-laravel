@@ -24,63 +24,49 @@ export const useLaravelApi = () => {
         return `${apiBase}${url}`
     }
 
-    const get = async (url: string, options: any = {}) => {
+    const makeRequest = async (url: string, options: any = {}) => {
         return await ofetch(getApiUrl(url), {
-            method: 'GET',
             headers: {
                 Accept: 'application/json',
                 'X-XSRF-TOKEN': xsrfToken || '',
             },
             credentials: 'include',
             ...options,
+        })
+    }
+
+    const get = async (url: string, options: any = {}) => {
+        return makeRequest(url, {
+            ...options,
+            method: 'GET',
         })
     }
     const post = async (url: string, body: any, options: any = {}) => {
-        return await ofetch(getApiUrl(url), {
-            method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': xsrfToken || '',
-            },
-            body,
-            credentials: 'include',
+        return makeRequest(url, {
             ...options,
+            method: 'POST',
+            body,
         })
     }
     const put = async (url: string, body: any, options: any = {}) => {
-        return await ofetch(getApiUrl(url), {
-            method: 'PUT',
-            headers: {
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': xsrfToken || '',
-            },
-            body,
-            credentials: 'include',
+        return makeRequest(url, {
             ...options,
+            method: 'PUT',
+            body,
         })
     }
     const patch = async (url: string, body: any, options: any = {}) => {
-        return await ofetch(getApiUrl(url), {
-            method: 'PATCH',
-            headers: {
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': xsrfToken || '',
-            },
-            body,
-            credentials: 'include',
+        return makeRequest(url, {
             ...options,
+            method: 'PATCH',
+            body,
         })
     }
     const destroy = async (url: string, body: any, options: any = {}) => {
-        return await ofetch(getApiUrl(url), {
-            method: 'DELETE',
-            headers: {
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': xsrfToken || '',
-            },
-            credentials: 'include',
-            body,
+        return makeRequest(url, {
             ...options,
+            method: 'DELETE',
+            body,
         })
     }
 
