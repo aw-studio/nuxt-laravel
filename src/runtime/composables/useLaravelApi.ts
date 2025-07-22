@@ -71,7 +71,7 @@ export const useLaravelApi = () => {
             ...options,
         })
     }
-    const destroy = async (url: string, options: any = {}) => {
+    const destroy = async (url: string, body: any, options: any = {}) => {
         return await ofetch(getApiUrl(url), {
             method: 'DELETE',
             headers: {
@@ -79,6 +79,7 @@ export const useLaravelApi = () => {
                 'X-XSRF-TOKEN': xsrfToken || '',
             },
             credentials: 'include',
+            body,
             ...options,
         })
     }
