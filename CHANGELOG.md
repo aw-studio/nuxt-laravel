@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.0.31
+
+[compare changes](https://github.com/aw-studio/nuxt-laravel/compare/v0.0.30...v0.0.31)
+
+### 🚀 Enhancements
+
+- Delete request with body ([#4](https://github.com/aw-studio/nuxt-laravel/pull/4))
+
+### ❤️ Contributors
+
+- Lukas Heller <dev@lukas-heller.de>
+
 ## v0.0.30
 
 [compare changes](https://github.com/aw-studio/nuxt-laravel/compare/v0.0.29...v0.0.30)
