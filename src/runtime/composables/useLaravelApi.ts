@@ -25,6 +25,8 @@ export const useLaravelApi = () => {
     }
 
     const makeRequest = async (url: string, options: any = {}) => {
+        const xsrfToken = useCookie('XSRF-TOKEN').value
+
         const fetch =
             typeof useNuxtApp().$apiFetch === 'function'
                 ? (useNuxtApp().$apiFetch as typeof ofetch)
