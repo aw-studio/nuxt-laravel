@@ -1,3 +1,4 @@
+import type { Ref } from 'vue'
 import type { ZodObject, ZodRawShape } from 'zod'
 
 export type LaravelResponseMeta = {
@@ -48,6 +49,25 @@ export type LaravelIndexOptions = {
     ssr?: boolean
     onError?: (error: any) => void
     onSuccess?: (response: IndexResponse<any>) => void
+}
+
+export type LaravelIndex<T> = LaravelIndexState<T> & {
+    state: Ref<LaravelIndexState<T>>
+    hasNextPage: Ref<boolean>
+    hasPrevPage: Ref<boolean>
+    nextPage: () => void
+    prevPage: () => void
+    setPerPage: (perPage: number) => void
+    setPage: (page: number) => void
+    setSearch: (search: string) => void
+    setFilter: (filter: Filter) => void
+    setSort: (sort: string) => void
+    setSyncUrl: (syncUrl: boolean) => void
+    setConfig: (config: LaravelIndexOptions) => void
+    load: (page?: number, append?: boolean) => Promise<void>
+    loadAll: () => Promise<void>
+    loadMore: () => void
+    mutateStateItem: (id: string | number, data: Partial<T>) => void
 }
 
 export type FilterOperatorOption =

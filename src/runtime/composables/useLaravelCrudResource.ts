@@ -1,5 +1,9 @@
 import type { ZodObject, ZodRawShape } from 'zod'
-import type { LaravelGetOptions, LaravelIndexOptions } from '../types'
+import type {
+    LaravelGetOptions,
+    LaravelIndexOptions,
+    LaravelIndex,
+} from '../types'
 import { useLaravelIndex } from './useLaravelIndex'
 import { useLaravelGet } from './useLaravelGet'
 import { useLaravelForm } from './useLaravelForm'
@@ -24,11 +28,70 @@ type IndexConfig = {
     options?: LaravelIndexOptions
 }
 
-type CrudResourceConfig<TCreateForm, TUpdateForm, TDeleteForm> = {
-    config: CrudOperationConfig<TCreateForm>
-    create?: CrudOperationConfig<TCreateForm>
-    update?: CrudOperationConfig<TUpdateForm>
-    delete?: CrudOperationConfig<TDeleteForm>
+type WithUrlPrefix = {
+    urlPrefix?: string
+}
+
+type BuildEndpointParams = WithUrlPrefix & {
+    id?: string | number
+}
+
+type GetOperationConfigParams = WithUrlPrefix & {
+    id?: string | number
+}
+
+type CrudIndexParams = WithUrlPrefix
+
+type CrudCreateParams = WithUrlPrefix
+
+type CrudUpdateParams = WithUrlPrefix
+
+type CrudDeleteParams = WithUrlPrefix
+
+type CrudShowParams = WithUrlPrefix & {
+    options?: LaravelGetOptions
+}
+
+type CrudFormTypes<
+    TCreate extends Record<string, any>,
+    TUpdate = TCreate,
+    TDelete = object
+> = {
+    create: TCreate
+    update?: TUpdate
+    delete?: TDelete
+}
+
+type CrudReturnTypes<
+    TIndexModel,
+    TShow = TIndexModel,
+    TUpdate = TIndexModel
+> = {
+    index: TIndexModel
+    show?: TShow
+    update?: TUpdate
+}
+
+type ExtractFormType<
+    TForms,
+    K extends keyof CrudFormTypes<any, any, any>,
+    TCreateFallback
+> = K extends keyof TForms
+    ? NonNullable<TForms[K]> extends Record<string, any>
+        ? NonNullable<TForms[K]>
+        : object
+    : TCreateFallback
+
+type ExtractReturnType<
+    TReturns extends { index: any },
+    K extends keyof any
+> = K extends keyof TReturns ? NonNullable<TReturns[K]> : TReturns['index']
+
+type CrudResourceConfig<TCreate, TUpdate, TDelete> = {
+    config: CrudOperationConfig<TCreate>
+    create?: CrudOperationConfig<TCreate>
+    update?: CrudOperationConfig<TUpdate>
+    delete?: CrudOperationConfig<TDelete>
     show?: ShowConfig
     index?: IndexConfig
     methods?: {
@@ -36,43 +99,23 @@ type CrudResourceConfig<TCreateForm, TUpdateForm, TDeleteForm> = {
     }
 }
 
-type BuildEndpointParams = {
-    id?: string | number
-    urlPrefix?: string
-}
-
-type GetOperationConfigParams = {
-    id?: string | number
-    urlPrefix?: string
-}
-
-type CrudIndexParams = {
-    urlPrefix?: string
-}
-
-type CrudShowParams = {
-    options?: LaravelGetOptions
-    urlPrefix?: string
-}
-
-type CrudCreateParams = {
-    urlPrefix?: string
-}
-
-type CrudUpdateParams = {
-    urlPrefix?: string
-}
-
-type CrudDeleteParams = {
-    urlPrefix?: string
-}
-
 export function useLaravelCrudResource<
-    TModel extends Record<string, any>,
-    TCreateForm extends Record<string, any>,
-    TUpdateForm extends Record<string, any> = TCreateForm,
-    TDeleteForm extends Record<string, any> | null = null
->(config: CrudResourceConfig<TCreateForm, TUpdateForm, TDeleteForm>) {
+    TReturns extends CrudReturnTypes<any>,
+    TForms extends CrudFormTypes<any>
+>(
+    config: CrudResourceConfig<
+        TForms['create'],
+        ExtractFormType<TForms, 'update', TForms['create']>,
+        ExtractFormType<TForms, 'delete', null>
+    >
+) {
+    type TModel = TReturns['index']
+    type TCreateForm = TForms['create']
+    type TUpdateForm = ExtractFormType<TForms, 'update', TCreateForm>
+    type TDeleteForm = ExtractFormType<TForms, 'delete', null>
+
+    type TShowModel = ExtractReturnType<TReturns, 'show'>
+
     const buildEndpoint = (
         operation: CrudOperation,
         params: BuildEndpointParams
@@ -139,7 +182,10 @@ export function useLaravelCrudResource<
         }
     }
 
-    const index = (options?: LaravelIndexOptions, params?: CrudIndexParams) => {
+    const index = (
+        options?: LaravelIndexOptions,
+        params?: CrudIndexParams
+    ): LaravelIndex<TModel> => {
         const indexOptions = options ?? config.index?.options
         return useLaravelIndex<TModel>(
             buildEndpoint('index', {
@@ -151,7 +197,7 @@ export function useLaravelCrudResource<
 
     const show = async (id: string | number, params?: CrudShowParams) => {
         const showOptions = params?.options ?? config.show?.options
-        return useLaravelGet<TModel>(
+        return useLaravelGet<TShowModel>(
             buildEndpoint('show', {
                 id,
                 urlPrefix: params?.urlPrefix,
@@ -203,10 +249,11 @@ export function useLaravelCrudResource<
             urlPrefix: params?.urlPrefix,
         })
 
-        // @ts-expect-error: TDeleteForm can be null, but we need to ensure it is a Record<string, any> for useLaravelForm
+        // @ts-expect-error: Type 'TDeleteForm' is not assignable to type 'Record<string, any>'.
         return useLaravelForm<TDeleteForm>({
             initialValues:
-                operationConfig?.initialValues ?? ({} as TDeleteForm),
+                operationConfig?.initialValues ??
+                ({} as unknown as TDeleteForm),
             submitUrl: endpoint,
             method: 'DELETE',
             schema: operationConfig?.schema,

@@ -2,7 +2,7 @@
     <div>
         <h1>Test Page</h1>
         <p>This is a test page.</p>
-        <pre>{{ data }}</pre>
+        <pre>{{ data?.bar }}</pre>
         <pre>{{ items }}</pre>
     </div>
 </template>

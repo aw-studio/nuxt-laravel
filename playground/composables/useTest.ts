@@ -1,7 +1,11 @@
 import * as z from 'zod'
 
-type Test = {
+type TestIndexResource = {
     foo: string
+}
+
+type TestShowResource = {
+    bar: string
 }
 
 type CreateTestForm = {
@@ -12,10 +16,20 @@ type UpdateTestForm = {
     bar: string
 }
 
+type DeleteTestForm = {
+    baz: string
+}
+
 export const useTest = useLaravelCrudResource<
-    Test,
-    CreateTestForm,
-    UpdateTestForm
+    {
+        index: TestIndexResource
+        show: TestShowResource
+    },
+    {
+        create: CreateTestForm
+        update: UpdateTestForm
+        delete: DeleteTestForm
+    }
 >({
     config: {
         endpoint: '/tests',
