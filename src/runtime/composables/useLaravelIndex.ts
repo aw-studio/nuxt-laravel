@@ -11,7 +11,6 @@ import type {
 } from '../types'
 import { prepareQueryParams } from '../utils/prepareQueryParams'
 import { useLaravelApi } from './useLaravelApi'
-import { th } from 'zod/v4/locales'
 
 export function useLaravelIndex<T extends object>(
     endpoint: string,
