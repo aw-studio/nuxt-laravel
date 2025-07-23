@@ -1,10 +1,10 @@
 import * as z from 'zod'
 
-type Test = {
+type TestIndexResource = {
     foo: string
 }
 
-type Foo = {
+type TestShowResource = {
     bar: string
 }
 
@@ -22,8 +22,8 @@ type DeleteTestForm = {
 
 export const useTest = useLaravelCrudResource<
     {
-        index: Test
-        show: Foo
+        index: TestIndexResource
+        show: TestShowResource
     },
     {
         create: CreateTestForm
