@@ -1,6 +1,6 @@
-import { ofetch } from 'ofetch'
-import { useCookie } from 'nuxt/app'
+import { useCookie, useNuxtApp } from 'nuxt/app'
 import { useLaravelConfig } from '#imports'
+import { ofetch } from 'ofetch'
 
 export const useLaravelApi = () => {
     const config = useLaravelConfig()
@@ -25,7 +25,12 @@ export const useLaravelApi = () => {
     }
 
     const makeRequest = async (url: string, options: any = {}) => {
-        return await ofetch(getApiUrl(url), {
+        const fetch =
+            typeof useNuxtApp().$apiFetch === 'function'
+                ? (useNuxtApp().$apiFetch as typeof ofetch)
+                : ($fetch as typeof ofetch)
+
+        return await fetch(getApiUrl(url), {
             headers: {
                 Accept: 'application/json',
                 'X-XSRF-TOKEN': xsrfToken || '',
@@ -86,6 +91,7 @@ export const useLaravelApi = () => {
         put,
         patch,
         destroy,
+        makeRequest,
         client,
     }
 }
