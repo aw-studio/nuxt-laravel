@@ -11,6 +11,7 @@ import type {
 } from '../types'
 import { prepareQueryParams } from '../utils/prepareQueryParams'
 import { useLaravelApi } from './useLaravelApi'
+import { th } from 'zod/v4/locales'
 
 export function useLaravelIndex<T extends object>(
     endpoint: string,
@@ -93,6 +94,8 @@ export function useLaravelIndex<T extends object>(
             if (options?.onError) {
                 options.onError(e)
             }
+
+            throw e
         } finally {
             state.value.loading = false
         }
