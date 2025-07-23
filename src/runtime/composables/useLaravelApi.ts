@@ -1,11 +1,9 @@
 import { useCookie, useNuxtApp } from 'nuxt/app'
+import type { ofetch } from 'ofetch'
 import { useLaravelConfig } from '#imports'
-import { ofetch } from 'ofetch'
 
 export const useLaravelApi = () => {
     const config = useLaravelConfig()
-
-    const xsrfToken = useCookie('XSRF-TOKEN').value
 
     const getApiUrl = (url: string): string => {
         if (!url.startsWith('/')) {
