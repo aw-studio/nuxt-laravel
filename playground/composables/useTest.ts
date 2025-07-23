@@ -4,6 +4,10 @@ type Test = {
     foo: string
 }
 
+type Foo = {
+    bar: string
+}
+
 type CreateTestForm = {
     foo: string
 }
@@ -15,7 +19,12 @@ type UpdateTestForm = {
 export const useTest = useLaravelCrudResource<
     Test,
     CreateTestForm,
-    UpdateTestForm
+    UpdateTestForm,
+    null,
+    {
+        index: Foo
+        show: Foo
+    }
 >({
     config: {
         endpoint: '/tests',

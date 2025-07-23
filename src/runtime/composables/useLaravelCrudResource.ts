@@ -1,5 +1,9 @@
 import type { ZodObject, ZodRawShape } from 'zod'
-import type { LaravelGetOptions, LaravelIndexOptions } from '../types'
+import type {
+    LaravelGetOptions,
+    LaravelIndexOptions,
+    LaravelIndex,
+} from '../types'
 import { useLaravelIndex } from './useLaravelIndex'
 import { useLaravelGet } from './useLaravelGet'
 import { useLaravelForm } from './useLaravelForm'
@@ -67,11 +71,29 @@ type CrudDeleteParams = {
     urlPrefix?: string
 }
 
+type CrudReturnOverrides = {
+    index?: any
+    show?: any
+}
+
+type IndexModelOverride<TOverrides, TModel> = TOverrides extends {
+    index: infer U
+}
+    ? U
+    : TModel
+
+type ShowModelOverride<TOverrides, TModel> = TOverrides extends {
+    show: infer U
+}
+    ? U
+    : TModel
+
 export function useLaravelCrudResource<
     TModel extends Record<string, any>,
     TCreateForm extends Record<string, any>,
     TUpdateForm extends Record<string, any> = TCreateForm,
-    TDeleteForm extends Record<string, any> | null = null
+    TDeleteForm extends Record<string, any> | null = null,
+    TOverrides extends Partial<CrudReturnOverrides> = object
 >(config: CrudResourceConfig<TCreateForm, TUpdateForm, TDeleteForm>) {
     const buildEndpoint = (
         operation: CrudOperation,
@@ -139,9 +161,15 @@ export function useLaravelCrudResource<
         }
     }
 
-    const index = (options?: LaravelIndexOptions, params?: CrudIndexParams) => {
+    type IndexModel = IndexModelOverride<TOverrides, TModel>
+    type IndexReturnType = LaravelIndex<IndexModel>
+
+    const index = (
+        options?: LaravelIndexOptions,
+        params?: CrudIndexParams
+    ): IndexReturnType => {
         const indexOptions = options ?? config.index?.options
-        return useLaravelIndex<TModel>(
+        return useLaravelIndex<IndexModel>(
             buildEndpoint('index', {
                 urlPrefix: params?.urlPrefix,
             }),
@@ -149,9 +177,11 @@ export function useLaravelCrudResource<
         )
     }
 
+    type ShowModel = ShowModelOverride<TOverrides, TModel>
+
     const show = async (id: string | number, params?: CrudShowParams) => {
         const showOptions = params?.options ?? config.show?.options
-        return useLaravelGet<TModel>(
+        return useLaravelGet<ShowModel>(
             buildEndpoint('show', {
                 id,
                 urlPrefix: params?.urlPrefix,

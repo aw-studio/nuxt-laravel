@@ -7,6 +7,7 @@ import type {
     LaravelResponseMeta,
     LaravelIndexOptions,
     LaravelIndexState,
+    LaravelIndex,
 } from '../types'
 import { prepareQueryParams } from '../utils/prepareQueryParams'
 import { useLaravelApi } from './useLaravelApi'
@@ -14,7 +15,7 @@ import { useLaravelApi } from './useLaravelApi'
 export function useLaravelIndex<T extends object>(
     endpoint: string,
     options?: LaravelIndexOptions
-) {
+): LaravelIndex<T> {
     const router = useRouter()
     const route = useRoute()
 
@@ -98,7 +99,7 @@ export function useLaravelIndex<T extends object>(
     }
 
     const hasNextPage = computed(() => {
-        return (
+        return !!(
             state.value.meta &&
             state.value.meta.current_page &&
             state.value.meta.current_page < state.value.meta.last_page
@@ -106,7 +107,7 @@ export function useLaravelIndex<T extends object>(
     })
 
     const hasPrevPage = computed(() => {
-        return (
+        return !!(
             state.value.meta &&
             state.value.meta.current_page &&
             state.value.meta.current_page > 1
@@ -272,16 +273,8 @@ export function useLaravelIndex<T extends object>(
         setConfig(options)
     }
 
-    // load the first page on init
-    // if (state.value.__hash === undefined) {
-    //     stateHash()
-    //     await useAsyncData(`${endpoint}`, async () => {
-    //         return await load()
-    //     })
-    // }
-
     return {
-        ...toRefs(state.value),
+        ...(toRefs(state.value) as any as LaravelIndexState<T>),
         state,
         hasNextPage,
         hasPrevPage,
