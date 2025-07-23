@@ -16,14 +16,19 @@ type UpdateTestForm = {
     bar: string
 }
 
+type DeleteTestForm = {
+    baz: string
+}
+
 export const useTest = useLaravelCrudResource<
-    Test,
-    CreateTestForm,
-    UpdateTestForm,
-    null,
     {
-        index: Foo
+        index: Test
         show: Foo
+    },
+    {
+        create: CreateTestForm
+        update: UpdateTestForm
+        delete: DeleteTestForm
     }
 >({
     config: {
