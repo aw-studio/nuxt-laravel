@@ -1,8 +1,8 @@
 <template>
     <div class="p-16">
         <!-- <LoginForm /> -->
-        <input v-model="form.fields.translation.de"
-               class="border" />
+        <!-- <input v-model="form.fields.translation.de"
+               class="border" /> -->
         <pre>{{ form.fields }}</pre>
         <hr>
         <pre>{{ form }}</pre>
