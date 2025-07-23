@@ -1,4 +1,4 @@
-import type { Ref } from 'vue'
+import type { Ref, ToRefs } from 'vue'
 import type { ZodObject, ZodRawShape } from 'zod'
 
 export type LaravelResponseMeta = {
@@ -51,7 +51,7 @@ export type LaravelIndexOptions = {
     onSuccess?: (response: IndexResponse<any>) => void
 }
 
-export type LaravelIndex<T> = LaravelIndexState<T> & {
+export type LaravelIndex<T> = ToRefs<LaravelIndexState<T>> & {
     state: Ref<LaravelIndexState<T>>
     hasNextPage: Ref<boolean>
     hasPrevPage: Ref<boolean>

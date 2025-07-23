@@ -276,7 +276,7 @@ export function useLaravelIndex<T extends object>(
     }
 
     return {
-        ...(toRefs(state.value) as any as LaravelIndexState<T>),
+        ...toRefs(state.value),
         state,
         hasNextPage,
         hasPrevPage,
