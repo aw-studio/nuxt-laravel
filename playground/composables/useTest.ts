@@ -10,6 +10,9 @@ type TestShowResource = {
 
 type CreateTestForm = {
     foo: string
+    bar: {
+        baz: boolean
+    }
 }
 
 type UpdateTestForm = {
@@ -19,6 +22,23 @@ type UpdateTestForm = {
 type DeleteTestForm = {
     baz: string
 }
+
+export const createTest = useLaravelForm<CreateTestForm>({
+    schema: z.object({
+        foo: z.string().min(1, 'Foo is required'),
+        bar: z.object({
+            baz: z.boolean(),
+        }),
+    }),
+    initialValues: {
+        foo: 'Initial Foo Value',
+        bar: {
+            baz: true,
+        },
+    },
+    submitUrl: '/tests/create',
+    method: 'POST',
+})
 
 export const useTest = useLaravelCrudResource<
     {
@@ -35,17 +55,29 @@ export const useTest = useLaravelCrudResource<
         endpoint: '/tests',
         initialValues: {
             foo: 'Initial Foo Value',
+            bar: {
+                baz: true,
+            },
         },
         schema: z.object({
             foo: z.string().min(1, 'Foo is required'),
+            bar: z.object({
+                baz: z.boolean(),
+            }),
         }),
     },
     create: {
         initialValues: {
             foo: 'Create Foo Value',
+            bar: {
+                baz: true,
+            },
         },
         schema: z.object({
             foo: z.string().min(1, 'Foo is required'),
+            bar: z.object({
+                baz: z.boolean(),
+            }),
         }),
     },
     update: {

@@ -16,7 +16,7 @@ export type FieldMetaMap<T> = { [K in keyof T]: FieldMeta<T[K]> }
 export type LaravelForm<TForm extends Record<string, any>> = ReturnType<
     typeof useForm<TForm>
 > & {
-    fields: { [K in keyof TForm]: any }
+    fields: TForm
     fieldProps: FieldProps<TForm>
     fieldMeta: FieldMetaMap<TForm>
     submit: () => Promise<any>
@@ -44,16 +44,14 @@ export function useLaravelForm<TForm extends Record<string, any>>(
 
     const { values, setFieldError, defineField, handleSubmit } = form
 
-    const fields = reactive({}) as {
-        [K in keyof TForm]: any
-    }
+    const fields = reactive({} as TForm)
     const fieldProps = reactive({}) as FieldProps<TForm>
     const fieldMeta = reactive({}) as FieldMetaMap<TForm>
 
     for (const key of Object.keys(initialValues) as (keyof TForm)[]) {
         const [field, props] = defineField(key as string)
         const { meta } = useField(() => key as string)
-
+        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type 'Reactive<{ [K in keyof TForm]: Ref<TForm[K], TForm[K]>; }>'.ts(2536)
         fields[key] = field
         // @ts-expect-error: Property 'validateOnValueUpdate' is missing in type 'Ref<BaseFieldProps & GenericObject, BaseFieldProps & GenericObject>' but required in type 'FieldOptions<TForm[keyof TForm]>'
         fieldProps[key] = props

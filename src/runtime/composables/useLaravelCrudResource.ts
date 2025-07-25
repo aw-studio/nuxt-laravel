@@ -213,7 +213,7 @@ export function useLaravelCrudResource<
             })
 
         return useLaravelForm<TCreateForm>({
-            initialValues: initialValues as TCreateForm,
+            initialValues: initialValues,
             submitUrl: endpoint,
             schema: schema,
             method: 'POST',
