@@ -14,7 +14,7 @@ type CrudOperationConfig<TForm> = {
     endpoint?: string
     schema?: ZodObject<ZodRawShape>
     initialValues?: TForm
-    onSuccess?: () => void
+    onSuccess?: (response: any) => void
     onError?: (error: any) => void
 }
 
