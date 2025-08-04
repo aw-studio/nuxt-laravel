@@ -259,6 +259,8 @@ export function useLaravelIndex<T extends object>(
         state.value.__hash = hash
     }
 
+    let initialized = false
+
     watch(
         [
             () => state.value.sort,
@@ -266,6 +268,9 @@ export function useLaravelIndex<T extends object>(
             () => state.value.filter,
         ],
         () => {
+            if (!initialized) {
+                return
+            }
             stateHash()
 
             if (state.value.page) {
@@ -279,6 +284,9 @@ export function useLaravelIndex<T extends object>(
     if (options) {
         setConfig(options)
     }
+
+    // Enable reactive loading after initial setup
+    initialized = true
 
     return {
         ...toRefs(state.value),
