@@ -47,6 +47,7 @@ export type LaravelIndexOptions = {
     syncUrl?: boolean
     sort?: string
     ssr?: boolean
+    key?: string
     onError?: (error: any) => void
     onSuccess?: (response: IndexResponse<any>) => void
 }

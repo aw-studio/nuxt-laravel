@@ -20,10 +20,15 @@ export function useLaravelIndex<T extends object>(
     const route = useRoute()
 
     /**
+     * Set a unique key for the index state.
+     */
+    const indexKey = options?.key || `index-${endpoint}`
+
+    /**
      * State for the laravel index.
      *
      */
-    const state = useState<LaravelIndexState<T>>(`index-${endpoint}`, () => ({
+    const state = useState<LaravelIndexState<T>>(indexKey, () => ({
         items: [] as T[],
         error: null as {
             message: string
