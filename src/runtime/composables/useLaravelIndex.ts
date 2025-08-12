@@ -243,20 +243,24 @@ export function useLaravelIndex<T extends object>(
         }
     }
 
-    const stateHash = () => {
-        const hash = md5(
+    const hasChanges = () => {
+        const newHash = md5(
             JSON.stringify({
                 sort: state.value.sort,
                 search: state.value.search,
                 filter: state.value.filter,
             })
         )
-        // if the hash is the same as the previous hash, don't fetch
-        if (state.value.__updated && state.value.__hash === hash) {
-            return
+
+        // Compare with previous hash
+        const changed = state.value.__hash !== newHash
+
+        if (changed) {
+            state.value.__hash = newHash
+            state.value.__updated = new Date()
         }
-        state.value.__updated = new Date()
-        state.value.__hash = hash
+
+        return changed
     }
 
     let initialized = false
@@ -271,7 +275,10 @@ export function useLaravelIndex<T extends object>(
             if (!initialized) {
                 return
             }
-            stateHash()
+
+            if (!hasChanges()) {
+                return
+            }
 
             if (state.value.page) {
                 load(1)
