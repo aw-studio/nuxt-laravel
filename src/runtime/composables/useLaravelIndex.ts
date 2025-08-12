@@ -189,7 +189,21 @@ export function useLaravelIndex<T extends object>(
 
         if (state.value.syncUrl) {
             router.push({
-                query: { ...route.query, page: state.value.page },
+                query: {
+                    ...route.query,
+                    page: state.value.page,
+                    perPage: state.value.perPage,
+                    sort: state.value.sort,
+                    search: state.value.search,
+                    ...Object.fromEntries(
+                        Object.entries(state.value.filter).map(
+                            ([key, value]) => [
+                                key,
+                                Array.isArray(value) ? value.join(',') : value,
+                            ]
+                        )
+                    ),
+                },
             })
         }
 
@@ -261,6 +275,33 @@ export function useLaravelIndex<T extends object>(
         }
 
         return changed
+    }
+
+    if (state.value.syncUrl) {
+        const q = route.query
+
+        if (q.sort && typeof q.sort === 'string') {
+            state.value.sort = q.sort
+        }
+
+        if (q.search && typeof q.search === 'string') {
+            state.value.search = q.search
+        }
+
+        // Build filter from all other query params except known keys
+        const knownKeys = new Set(['page', 'perPage', 'sort', 'search'])
+        const filter: Filter = {}
+
+        Object.keys(q).forEach(key => {
+            if (!knownKeys.has(key)) {
+                const value = q[key]
+                if (typeof value === 'string') {
+                    filter[key] = value // string form for URL-based filter
+                }
+            }
+        })
+
+        state.value.filter = filter
     }
 
     watch(
