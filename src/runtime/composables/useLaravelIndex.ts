@@ -37,14 +37,14 @@ export function useLaravelIndex<T extends object>(
         loading: false,
         meta: undefined as LaravelResponseMeta | undefined,
         page: undefined as number | undefined,
-        perPage: undefined as number | undefined,
-        syncUrl: false,
-        sort: undefined as string | undefined,
+        perPage: options?.perPage as number | undefined,
+        syncUrl: options?.syncUrl ?? true,
+        sort: options?.sort as string | undefined,
         search: undefined as string | undefined,
         filter: {} as Filter,
         __updated: new Date(),
         __hash: undefined as string | undefined,
-        __ssr: false,
+        __ssr: options?.ssr ?? false,
     }))
 
     const setConfig = (config: LaravelIndexOptions) => {
@@ -263,8 +263,6 @@ export function useLaravelIndex<T extends object>(
         return changed
     }
 
-    let initialized = false
-
     watch(
         [
             () => state.value.sort,
@@ -272,10 +270,6 @@ export function useLaravelIndex<T extends object>(
             () => state.value.filter,
         ],
         () => {
-            if (!initialized) {
-                return
-            }
-
             if (!hasChanges()) {
                 return
             }
@@ -287,13 +281,6 @@ export function useLaravelIndex<T extends object>(
             }
         }
     )
-
-    if (options) {
-        setConfig(options)
-    }
-
-    // Enable reactive loading after initial setup
-    initialized = true
 
     return {
         ...toRefs(state.value),
