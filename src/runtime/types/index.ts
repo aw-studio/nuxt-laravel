@@ -69,6 +69,7 @@ export type LaravelIndex<T> = ToRefs<LaravelIndexState<T>> & {
     loadAll: () => Promise<void>
     loadMore: () => void
     mutateStateItem: (id: string | number, data: Partial<T>) => void
+    reset: () => void
 }
 
 export type FilterOperatorOption =

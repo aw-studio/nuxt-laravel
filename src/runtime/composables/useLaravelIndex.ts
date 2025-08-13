@@ -323,6 +323,22 @@ export function useLaravelIndex<T extends object>(
         }
     )
 
+    const reset = () => {
+        state.value.items = []
+        state.value.error = null
+        state.value.loading = false
+        state.value.meta = undefined
+        state.value.page = undefined
+        state.value.perPage = options?.perPage || 10
+        state.value.syncUrl = options?.syncUrl ?? true
+        state.value.sort = options?.sort || ''
+        state.value.search = undefined
+        state.value.filter = {}
+        state.value.__updated = new Date()
+        state.value.__hash = undefined
+        state.value.__ssr = options?.ssr ?? false
+    }
+
     return {
         ...toRefs(state.value),
         state,
@@ -341,5 +357,6 @@ export function useLaravelIndex<T extends object>(
         loadAll,
         loadMore,
         mutateStateItem,
+        reset,
     }
 }
