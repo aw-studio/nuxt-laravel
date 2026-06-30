@@ -38,6 +38,36 @@ npx nuxi module add my-module
 That's it! You can now use My Module in your Nuxt app ✨
 
 
+## `useLaravelIndex` — URL filter hydration
+
+When `syncUrl` is enabled, `useLaravelIndex` mirrors the list state (page, sort,
+search and filters) into the query string, and on init it hydrates that state
+back from the URL.
+
+By default, **every** unknown query param is read back as a filter. This means a
+filter set by one index can leak into another via the URL. For example, a
+vehicles index sets `?is_active=1`; the user navigates to a vehicle-groups index,
+which hydrates `is_active` from the URL and sends it to a backend whose filter
+allowlist does not include that field — resulting in an error.
+
+Use the `urlFilters` option to restrict which keys may be hydrated from the URL.
+When set, only the listed keys are read back (everything else is ignored); when
+omitted, the original behavior is unchanged.
+
+```ts
+const { items, load } = await useLaravelIndex<VehicleGroup>('/api/vehicle-groups', {
+  syncUrl: true,
+  // Only these keys are hydrated from the query string. A stale `?is_active=1`
+  // left over from another index is ignored instead of being sent to the backend.
+  urlFilters: ['name'],
+})
+```
+
+| Option       | Type       | Default     | Description                                                                 |
+| ------------ | ---------- | ----------- | --------------------------------------------------------------------------- |
+| `urlFilters` | `string[]` | `undefined` | Allowlist of query keys to hydrate into `filter`. Omit for legacy behavior. |
+
+
 ## Contribution
 
 <details>
