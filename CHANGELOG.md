@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.0.43
+
+[compare changes](https://github.com/aw-studio/nuxt-laravel/compare/v0.0.42...v0.0.43)
+
+### 🩹 Fixes
+
+- **index:** Prevent cross-page URL filter leakage in useLaravelIndex ([60cc646](https://github.com/aw-studio/nuxt-laravel/commit/60cc646))
+
+### ❤️ Contributors
+
+- Jannes Behrens <jannes@aw-studio.de>
+
 ## v0.0.42
 
 [compare changes](https://github.com/aw-studio/nuxt-laravel/compare/v0.0.41...v0.0.42)
