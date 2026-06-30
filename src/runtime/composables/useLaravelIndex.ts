@@ -10,6 +10,7 @@ import type {
     LaravelIndex,
 } from '../types'
 import { prepareQueryParams } from '../utils/prepareQueryParams'
+import { buildFilterFromQuery } from '../utils/buildFilterFromQuery'
 import { useLaravelApi } from './useLaravelApi'
 
 export function useLaravelIndex<T extends object>(
@@ -288,20 +289,11 @@ export function useLaravelIndex<T extends object>(
             state.value.search = q.search
         }
 
-        // Build filter from all other query params except known keys
-        const knownKeys = new Set(['page', 'perPage', 'sort', 'search'])
-        const filter: Filter = {}
-
-        Object.keys(q).forEach(key => {
-            if (!knownKeys.has(key)) {
-                const value = q[key]
-                if (typeof value === 'string') {
-                    filter[key] = value // string form for URL-based filter
-                }
-            }
-        })
-
-        state.value.filter = filter
+        // Build filter from query params. When `urlFilters` is set, only those
+        // keys are hydrated from the URL — this prevents cross-page leakage of
+        // stale query params (e.g. a `?is_active=1` from another index being
+        // sent to a backend whose filter allowlist would reject it).
+        state.value.filter = buildFilterFromQuery(q, options?.urlFilters)
     }
 
     watch(
@@ -330,7 +322,7 @@ export function useLaravelIndex<T extends object>(
         state.value.meta = undefined
         state.value.page = undefined
         state.value.perPage = options?.perPage || 10
-        state.value.syncUrl = options?.syncUrl ?? true
+        state.value.syncUrl = options?.syncUrl ?? false
         state.value.sort = options?.sort || ''
         state.value.search = undefined
         state.value.filter = {}

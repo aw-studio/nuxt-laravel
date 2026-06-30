@@ -48,6 +48,20 @@ export type LaravelIndexOptions = {
     sort?: string
     ssr?: boolean
     key?: string
+    /**
+     * Restrict which query-string keys are hydrated into `filter` on init.
+     *
+     * When set, only these keys are read from the URL (any other query params
+     * are ignored). This prevents cross-page filter leakage, e.g. a `?is_active=1`
+     * left in the URL by one index being sent as a filter by an unrelated index
+     * whose backend allowlist rejects it.
+     *
+     * When omitted, every unknown query param is treated as a filter (the
+     * original, unchanged behavior).
+     *
+     * @example ['is_active', 'name']
+     */
+    urlFilters?: string[]
     onError?: (error: any) => void
     onSuccess?: (response: IndexResponse<any>) => void
 }
