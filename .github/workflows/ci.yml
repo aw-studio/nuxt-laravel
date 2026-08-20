@@ -25,7 +25,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - run: npm i -g --force corepack@latest && corepack enable
 
@@ -59,7 +59,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - run: npm i -g --force corepack@latest && corepack enable
 
@@ -106,7 +106,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - run: npm i -g --force corepack@latest && corepack enable
 
@@ -117,6 +117,12 @@ jobs:
         run: |
           npm i -D nuxt@^${{ matrix.nuxt }}
           npm i @nuxt/kit@^${{ matrix.nuxt }}
+
+      # The root tsconfig extends ./.nuxt/tsconfig.json, which only exists once
+      # Nuxt has prepared. Without this, prepack fails on a clean checkout -
+      # locally it passed only because .nuxt was left over from a dev run.
+      - name: Prepare
+        run: npm run dev:prepare
 
       - name: Build
         run: npm run prepack
