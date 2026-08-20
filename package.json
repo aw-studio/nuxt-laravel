@@ -40,7 +40,8 @@
         "lint": "eslint .",
         "test": "vitest run",
         "test:watch": "vitest watch",
-        "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit"
+        "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit",
+        "test:coverage": "vitest run --coverage"
     },
     "dependencies": {
         "@nuxt/kit": "^3.17.5 || ^4.0.0",
@@ -54,6 +55,7 @@
         "@nuxt/module-builder": "^1.0.3",
         "@nuxt/test-utils": "^4.1.0",
         "@types/node": "latest",
+        "@vitest/coverage-v8": "^4.1.11",
         "changelogen": "^0.6.2",
         "eslint": "^10.8.1",
         "eslint-config-prettier": "^10.1.5",

@@ -13,6 +13,13 @@ import { defineVitestConfig } from '@nuxt/test-utils/config'
 // `runtimeConfig.public.laravel`.
 export default defineVitestConfig({
     test: {
+        coverage: {
+            provider: 'v8',
+            // The module's runtime is what consumers execute; the build-time
+            // module file and generated fixtures are not worth measuring.
+            include: ['src/runtime/**/*.ts'],
+            reporter: ['text', 'html'],
+        },
         environmentOptions: {
             nuxt: {
                 rootDir: fileURLToPath(
