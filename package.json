@@ -61,7 +61,7 @@
         "eslint-config-prettier": "^10.1.5",
         "happy-dom": "^20.11.6",
         "nuxt": "^4.5.2",
-        "typescript": "^5.9.3",
+        "typescript": "^7.0.2",
         "vitest": "^4.1.11",
         "vue-tsc": "^3.3.10",
         "zod": "^4.4.3"
