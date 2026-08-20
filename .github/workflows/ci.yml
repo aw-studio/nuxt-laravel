@@ -30,6 +30,22 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    # The module supports both Nuxt 3 and Nuxt 4 (see `compatibility` in
+    # src/module.ts). Without this matrix that support is true only by luck —
+    # Nuxt 4 generates a stricter tsconfig (noUncheckedIndexedAccess), so type
+    # regressions show up on 4 while 3 stays green.
+    #
+    # zod is a peer dependency spanning a major (^3.24.0 || ^4.0.0) and consumer
+    # schemas are passed straight through to @vee-validate/zod, which still
+    # declares only zod 3 — so both halves are exercised rather than assumed.
+    strategy:
+      fail-fast: false
+      matrix:
+        nuxt: ['3', '4']
+        zod: ['3', '4']
+
+    name: test (nuxt ${{ matrix.nuxt }}, zod ${{ matrix.zod }})
+
     steps:
       - uses: actions/checkout@v4
 
@@ -42,8 +58,64 @@ jobs:
       - name: Install dependencies
         run: npx nypm@latest i
 
+      # @nuxt/schema is deliberately NOT pinned here: it comes from `nuxt`
+      # itself, and pinning it to v3 conflicts with @nuxt/cli's peer range
+      # (pulled in by @nuxt/module-builder), which fails to resolve.
+      - name: Pin Nuxt ${{ matrix.nuxt }} and zod ${{ matrix.zod }}
+        run: |
+          npm i -D nuxt@^${{ matrix.nuxt }} zod@^${{ matrix.zod }}
+          npm i @nuxt/kit@^${{ matrix.nuxt }}
+
+      - name: Report resolved versions
+        run: npm ls nuxt @nuxt/kit zod || true
+
       - name: Playground prepare
         run: npm run dev:prepare
 
       - name: Test
         run: npm run test
+
+      # Typechecks the module source only. The playground is excluded because
+      # it currently has unrelated type errors; see `npm run test:types`.
+      - name: Typecheck module
+        run: npx vue-tsc --noEmit
+
+  build:
+    runs-on: ubuntu-latest
+
+    # `npm run release` runs prepack before publishing, so without this a broken
+    # build is only discovered at release time, half-way through the release
+    # script. Building both majors because the module ships generated .d.mts
+    # types produced against the installed @nuxt/kit.
+    strategy:
+      fail-fast: false
+      matrix:
+        nuxt: ['3', '4']
+
+    name: build (nuxt ${{ matrix.nuxt }})
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm i -g --force corepack@latest && corepack enable
+
+      - name: Install dependencies
+        run: npx nypm@latest i
+
+      - name: Pin Nuxt ${{ matrix.nuxt }}
+        run: |
+          npm i -D nuxt@^${{ matrix.nuxt }}
+          npm i @nuxt/kit@^${{ matrix.nuxt }}
+
+      - name: Build
+        run: npm run prepack
+
+      - name: Assert the published entrypoints exist
+        run: |
+          test -f dist/module.mjs || { echo "missing dist/module.mjs"; exit 1; }
+          test -f dist/types.d.mts || { echo "missing dist/types.d.mts"; exit 1; }
+          echo "built:"; ls -la dist
