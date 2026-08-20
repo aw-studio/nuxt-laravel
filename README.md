@@ -6,7 +6,7 @@
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-An opinionated Nuxt 3 toolkit for consuming a Laravel API: Sanctum (cookie/SPA)
+An opinionated Nuxt 3/4 toolkit for consuming a Laravel API: Sanctum (cookie/SPA)
 authentication, a typed HTTP client, stateful & filterable model indexes,
 Zod-validated forms with Laravel error mapping, and CRUD helpers — all
 auto-imported.
@@ -16,6 +16,7 @@ package on the backend for the filtering/sorting/pagination API.
 
 - [Features](#features)
 - [Setup](#setup)
+- [Backend contract](#backend-contract)
 - [Authentication (Sanctum)](#authentication-sanctum)
 - [HTTP Client — `useLaravelApi`](#http-client--uselaravelapi)
 - [Fetching a single model — `useLaravelGet`](#fetching-a-single-model--uselaravelget)
@@ -53,6 +54,33 @@ package on the backend for the filtering/sorting/pagination API.
 npm i @aw-studio/nuxt-laravel
 ```
 
+**Requirements**
+
+| Dependency | Supported            |
+| ---------- | -------------------- |
+| Nuxt       | `3.17+` and `4.x`    |
+| zod        | `^3.24.0 \|\| ^4.0.0` |
+
+`zod` is a **peer dependency**: you install it, and your version is the one the
+module uses. This matters because you pass your own zod schemas into
+`useLaravelForm` / `useLaravelCrud` — if the module bundled its own copy you
+could end up with two zod instances, where schemas built by one are not
+recognised by the other.
+
+```bash
+npm i zod
+```
+
+> **Note for zod 4 users.** `@vee-validate/zod` (used internally) still declares
+> a `zod@^3.24.0` peer, so npm may report `ERESOLVE` when you install zod 4
+> alongside it. zod 4 is tested and works — both majors are covered in CI. Until
+> that peer range is widened upstream, add an override:
+>
+> ```jsonc
+> // package.json
+> "overrides": { "@vee-validate/zod": { "zod": "$zod" } }
+> ```
+
 ### 2. Configure
 
 Add the module and point it at your Laravel API:
@@ -77,6 +105,45 @@ Because authentication is cookie/SPA based (Laravel Sanctum), the backend must:
 See the [Laravel Sanctum SPA docs](https://laravel.com/docs/sanctum#spa-authentication)
 and [Laravel Model Index](https://github.com/aw-studio/laravel-model-index) for
 the index/filter API.
+
+## Backend contract
+
+This module and
+[`aw-studio/laravel-model-index`](https://github.com/aw-studio/laravel-model-index)
+are coupled **only by the query string**. There is no generated client and no shared
+schema, so a mismatch is invisible until runtime.
+
+`useLaravelIndex` serializes state into exactly this shape:
+
+```
+?filter[price][$lte]=100&filter[name][$containsi]=shirt&sort=-created_at&search=foo&page=2&perPage=25
+```
+
+and expects Laravel's standard resource envelope back:
+
+```jsonc
+{
+  "data": [ /* items */ ],
+  "meta": { "total": 120, "per_page": 25, "current_page": 2, "last_page": 5, "from": 26, "to": 50 },
+  "links": { "first": "…", "last": "…", "prev": "…", "next": null }
+}
+```
+
+Two consequences worth knowing:
+
+- **`meta` only exists if the backend actually paginates.** `Model::index()->get()`
+  returns a bare collection unless the request carries `page` or `perPage`, so
+  `hasNextPage`, `loadMore()` and the page controls stay inert. Send a `perPage`, or
+  have the backend call `paginate()` explicitly.
+- **Filter and sort fields must be allowlisted server-side.** The backend rejects
+  unknown filter fields, unknown operators, and — once
+  `IndexQueryBuilder::defaultSortable([])` is in use — unknown sort fields, with a
+  `400`-class error rather than silently ignoring them.
+
+> [!NOTE]
+> Several operators on one key are ANDed — `{ price: { $gte: 18, $lte: 30 } }`
+> becomes `price >= 18 and price <= 30`. Inside an `$or` branch they take the
+> group's boolean and are ORed instead, so use `$between` for a range there.
 
 ## Authentication (Sanctum)
 
@@ -136,6 +203,13 @@ The `useLaravelIndex` composable provides a stateful, filterable Laravel API
 index. Pass the relative endpoint as the first argument — it also serves as the
 default state key, so keep it unique (or set `key`).
 
+> [!IMPORTANT]
+> State is stored in `useState(key ?? \`index-${endpoint}\`)`, so **every call site using
+> the same endpoint shares one state object**. That is what makes the index work across
+> components without a store — but two independent lists over the same endpoint (say a
+> sidebar preview and a full table) will fight over page and filters. Give one of them
+> its own `key`.
+
 It is typically wrapped in a reusable composable:
 
 ```ts
@@ -161,7 +235,7 @@ const { items } = await useProducts({
 
 | Option       | Type                      | Default     | Description                                                            |
 | ------------ | ------------------------- | ----------- | --------------------------------------------------------------------- |
-| `perPage`    | `number`                  | —           | Items per page.                                                       |
+| `perPage`    | `number`                  | —           | Items per page. Preserved across sort/search/filter changes.          |
 | `syncUrl`    | `boolean`                 | `true`      | Mirror state to the query string and hydrate from it on init.        |
 | `sort`       | `string`                  | —           | Initial sort.                                                         |
 | `ssr`        | `boolean`                 | `false`     | Load items during server-side rendering.                             |
@@ -198,6 +272,8 @@ await load(6)       // load a specific page
 await nextPage()    // next page
 await prevPage()    // previous page
 await loadAll()     // load every item, unpaginated
+                    // a later sort/search/filter change reloads page 1
+                    // paginated, rather than re-fetching everything
 await loadMore()    // append the next page (infinite scrolling)
 ```
 
@@ -250,8 +326,22 @@ setFilter({
 | `$containsi`    | Contains (case-insensitive)  |
 | `$notContainsi` | Not contains (case-insens.)  |
 | `$between`      | Between two values           |
+| `$startsWith`   | Starts with                  |
+| `$endsWith`     | Ends with                    |
+| `$null`         | Is null                      |
+| `$notNull`      | Is not null                  |
 
 Combine groups with `$and` / `$or`.
+
+> This table must stay in sync with the operators implemented in
+> [`aw-studio/laravel-model-index`](https://github.com/aw-studio/model-index).
+> The two packages are coupled only by the query string, so an operator listed
+> here but missing there is rejected at runtime with an
+> `Unsupported operator` error.
+
+The `i`-suffixed operators compare case-insensitively. Note that MySQL's default
+collation already ignores case, so on MySQL they behave identically to their
+plain counterparts; the difference shows up on PostgreSQL and SQLite.
 
 ### URL sync & `urlFilters`
 
