@@ -1,5 +1,78 @@
 # Changelog
 
+## v1.0.0
+
+First release with a stability commitment. See [UPGRADE.md](UPGRADE.md) for
+migration steps.
+
+Pairs with `aw-studio/laravel-model-index` **1.x**. The two packages are coupled
+only by the query string, so mixing majors is not supported.
+
+### Breaking changes
+
+- **`useLaravelCrudResource` is removed.** `useLaravelCrud` absorbs its features
+  — `urlPrefix`, per-operation config, `:id` substitution, custom methods — with
+  a flat config instead of the nested `config: { … }` wrapper. `destroy()` now
+  takes an id rather than a model, per-call endpoint overrides moved into a
+  params object, and `onCreateSuccess`/`onUpdateError` became per-operation
+  `onSuccess`/`onError`.
+- **`destroy()` no longer inherits the resource schema.** A `DELETE` sends no
+  meaningful body, so validating an empty payload against the create schema
+  rejected every delete.
+- **`zod` is a peer dependency** (`^3.24.0 || ^4.0.0`) rather than bundled, so
+  consumer schemas and the module always use the same zod instance.
+- **`laravel-echo` and `pusher-js` are removed.** Nothing in the package ever
+  imported them.
+- **`reset()` restores the options the index was created with.** It previously
+  used different fallbacks from the initialiser, silently turning `syncUrl` on,
+  inventing a page size and blanking an unset sort.
+- **URL sync uses `router.replace`.** Pass `historyMode: 'push'` to restore the
+  old behaviour, which made the back button walk through every intermediate
+  list state.
+- **The `ssr` option is removed.** It only set a state field nothing read; the
+  documented `await useProducts({ ssr: true })` never loaded during SSR. Await
+  `load()` in setup instead.
+- **`Filter` is an object with optional `$and`/`$or`** rather than a union, so
+  `filter.completed` typechecks.
+- `setConfig` checks presence rather than truthiness, so `{ syncUrl: false }`
+  and `{ perPage: 0 }` are no longer discarded.
+
+### Added
+
+- **Full Sanctum auth.** `useLaravelSanctum` gains `login`, `logout`,
+  `fetchUser`, `user`, `isAuthenticated` and `loading`, with configurable
+  endpoints and state key so multiple guards can run side by side.
+  `fetchUser()` resolves to `null` on 401/419 rather than throwing.
+- **Nuxt 4 support**, declared via `compatibility: '>=3.17.0'`.
+- `$startsWith`, `$endsWith`, `$null` and `$notNull` added to
+  `FilterOperatorOption`; the four case-insensitive operators the types already
+  advertised are now implemented server-side.
+- `historyMode` option on `useLaravelIndex`.
+
+### Fixed
+
+- **Watchers no longer accumulate.** Every call site used to add a watcher that
+  was never torn down, growing with each navigation. Registration is tracked
+  once per state key on the Nuxt app instance, which is per-request on the
+  server and per-session on the client.
+- A rejection with no `response` attached — a DNS failure, an offline client —
+  no longer throws a `TypeError` while building the error state, masking the
+  original cause.
+- The configured `perPage` is no longer destroyed when sort, search or filter
+  changes before the first load completes.
+- `ModuleOptions` moved into `runtime/types`, fixing an unresolvable
+  `~/src/module` import that had been failing the playground typecheck.
+
+### Internal
+
+- All four `@ts-expect-error` suppressions removed.
+- The hand-rolled 183-line `md5` util is gone; the serialized string is the
+  change-detection fingerprint.
+- Test suite grew from 7 tests to 165, including paired cross-package contract
+  tests and a Nuxt runtime environment for the composables.
+- CI runs a Nuxt 3/4 × zod 3/4 matrix, builds both majors, and gates on the
+  full typecheck.
+
 
 ## v0.0.44
 

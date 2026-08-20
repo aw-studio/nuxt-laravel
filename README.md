@@ -59,6 +59,10 @@ npm i @aw-studio/nuxt-laravel
 | ---------- | -------------------- |
 | Nuxt       | `3.17+` and `4.x`    |
 | zod        | `^3.24.0 \|\| ^4.0.0` |
+| [`aw-studio/laravel-model-index`](https://github.com/aw-studio/laravel-model-index) | `1.x` |
+
+The backend package is released as a pair with this one. Because the coupling is
+an untyped query string, mixing majors is not supported.
 
 `zod` is a **peer dependency**: you install it, and your version is the one the
 module uses. This matters because you pass your own zod schemas into
