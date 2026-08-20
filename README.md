@@ -210,6 +210,14 @@ default state key, so keep it unique (or set `key`).
 > sidebar preview and a full table) will fight over page and filters. Give one of them
 > its own `key`.
 
+State is shared per key, which is the point: a page can `load()` while child
+components read `items` from the same composable without a store. The flip side
+is that two *unrelated* lists over one endpoint will fight over page and filters
+— give one of them its own `key`.
+
+Only the first caller's options seed the state, since the initialiser runs once
+per key. Configure the index where you `load()` it, not in every consumer.
+
 It is typically wrapped in a reusable composable:
 
 ```ts
@@ -238,8 +246,8 @@ const { items } = await useProducts({
 | `perPage`    | `number`                  | —           | Items per page. Preserved across sort/search/filter changes.          |
 | `syncUrl`    | `boolean`                 | `true`      | Mirror state to the query string and hydrate from it on init.        |
 | `sort`       | `string`                  | —           | Initial sort.                                                         |
-| `ssr`        | `boolean`                 | `false`     | Load items during server-side rendering.                             |
-| `key`        | `string`                  | endpoint    | Override the shared state key.                                        |
+| `key`         | `string`                 | endpoint    | Override the shared state key.                                        |
+| `historyMode` | `'replace' \| 'push'`    | `'replace'` | Whether URL sync adds browser history entries.                        |
 | `urlFilters` | `string[]`                | `undefined` | Allowlist of query keys to hydrate into the filter (see below).      |
 | `onError`    | `(error) => void`         | —           | Called when a request fails.                                          |
 | `onSuccess`  | `(response) => void`      | —           | Called on a successful response.                                      |
@@ -256,11 +264,17 @@ setSyncUrl(false)
 
 ### SSR
 
-Pass `ssr: true` to load items during server-side rendering:
+Await `load()` in setup. The request runs on the server and the state is
+transferred to the client through Nuxt's payload, so the list renders with data
+and does not refetch on hydration:
 
 ```ts
-const { items } = await useProducts({ perPage: 6, ssr: true })
+const { items, load } = useProducts({ perPage: 6 })
+
+await load()
 ```
+
+State is keyed per endpoint (see below), which is what makes that transfer work.
 
 ### Data Fetching
 
@@ -348,6 +362,11 @@ plain counterparts; the difference shows up on PostgreSQL and SQLite.
 When `syncUrl` is enabled, the index mirrors page, sort, search, and filters
 into the query string and hydrates them back on init — so a shared/bookmarked
 URL restores the list state.
+
+Writes use `router.replace` by default, so stepping through pages or adjusting
+filters does not fill the history stack — the back button leaves the list rather
+than walking back through every intermediate state. Pass
+`historyMode: 'push'` if each page should be its own history entry.
 
 By default, **every** unknown query param is hydrated as a filter. This can leak
 state between pages: e.g. one index sets `?is_active=1`, the user navigates to an

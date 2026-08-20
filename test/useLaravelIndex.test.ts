@@ -18,13 +18,14 @@ import { useLaravelIndex } from '../src/runtime/composables/useLaravelIndex'
 
 let routeQuery: Record<string, unknown> = {}
 const push = vi.fn()
+const replace = vi.fn()
 
 vi.mock('nuxt/app', async importOriginal => {
     const actual = await importOriginal<typeof import('nuxt/app')>()
     return {
         ...actual,
         useRoute: () => ({ query: routeQuery }),
-        useRouter: () => ({ push }),
+        useRouter: () => ({ push, replace }),
     }
 })
 
@@ -63,6 +64,7 @@ beforeEach(() => {
     api.mockReset()
     api.mockResolvedValue(envelope([{ id: 1, name: 'One' }]))
     push.mockClear()
+    replace.mockClear()
     routeQuery = {}
     ;(useNuxtApp() as Record<string, unknown>).$apiFetch = api
 })
@@ -403,13 +405,13 @@ describe('URL sync', () => {
         expect(index.state.value.filter).toEqual({ is_active: '1' })
     })
 
-    it('pushes state back into the query string on load', async () => {
+    it('writes state back into the query string on load', async () => {
         const index = useLaravelIndex(uniqueEndpoint(), { perPage: 25 })
 
         await index.load(2)
 
-        expect(push).toHaveBeenCalled()
-        expect(push.mock.calls.at(-1)?.[0].query).toMatchObject({
+        expect(replace).toHaveBeenCalled()
+        expect(replace.mock.calls.at(-1)?.[0].query).toMatchObject({
             page: 2,
             perPage: 25,
         })
@@ -529,5 +531,147 @@ describe('reset', () => {
         expect(index.state.value.page).toBeUndefined()
         expect(index.state.value.search).toBeUndefined()
         expect(index.state.value.filter).toEqual({})
+    })
+})
+
+describe('watcher registration', () => {
+    it('registers one watcher per key regardless of how many callers there are', async () => {
+        const endpoint = uniqueEndpoint()
+        const a = useLaravelIndex(endpoint, { syncUrl: false })
+        useLaravelIndex(endpoint, { syncUrl: false })
+        useLaravelIndex(endpoint, { syncUrl: false })
+
+        await a.load()
+        api.mockClear()
+
+        // Three call sites share one state object, so a single change must
+        // produce exactly one request.
+        a.setSearch('shirt')
+        await settle()
+
+        expect(api).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not accumulate watchers as components come and go', async () => {
+        const endpoint = uniqueEndpoint()
+        const nuxtApp = useNuxtApp() as unknown as {
+            __laravelIndexWatchers?: Set<string>
+        }
+
+        for (let i = 0; i < 5; i++) {
+            useLaravelIndex(endpoint, { syncUrl: false })
+        }
+
+        // Registering per call site meant a watcher that was never torn down,
+        // so the count grew with every navigation. One key, one entry.
+        const forThisKey = [...(nuxtApp.__laravelIndexWatchers ?? [])].filter(
+            k => k === `index-${endpoint}`
+        )
+
+        expect(forThisKey).toHaveLength(1)
+    })
+
+    it('keeps separate watchers for separate keys', async () => {
+        const a = useLaravelIndex(uniqueEndpoint(), { syncUrl: false })
+        const b = useLaravelIndex(uniqueEndpoint(), { syncUrl: false })
+
+        await a.load()
+        await b.load()
+        api.mockClear()
+
+        a.setSearch('one')
+        b.setSearch('two')
+        await settle()
+
+        expect(api).toHaveBeenCalledTimes(2)
+    })
+})
+
+describe('error resilience', () => {
+    it('survives an error with no response attached', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), { syncUrl: false })
+        // A DNS failure or offline client rejects with a plain Error. Reading
+        // e.response._data used to throw a TypeError inside the catch block,
+        // masking the real cause at the worst possible moment.
+        api.mockRejectedValue(new Error('Network request failed'))
+
+        await expect(index.load()).rejects.toThrow('Network request failed')
+
+        expect(index.state.value.loading).toBe(false)
+        expect(index.state.value.error).not.toBeNull()
+    })
+
+    it('still reports the message for a response-less error', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), { syncUrl: false })
+        api.mockRejectedValue(new Error('Network request failed'))
+
+        await index.load().catch(() => {})
+
+        expect(index.state.value.error?.message).toContain('Network request failed')
+    })
+})
+
+describe('reset', () => {
+    it('restores the options the index was created with', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), {
+            syncUrl: false,
+            perPage: 25,
+            sort: '-created_at',
+        })
+        await index.load()
+
+        index.setSearch('shirt')
+        index.setSort('name')
+        await settle()
+
+        index.reset()
+
+        // reset() used to use different fallbacks from the initialiser, so it
+        // silently turned syncUrl on, invented a page size of 10 and set sort
+        // to an empty string.
+        expect(index.state.value.syncUrl).toBe(false)
+        expect(index.state.value.perPage).toBe(25)
+        expect(index.state.value.sort).toBe('-created_at')
+        expect(index.state.value.search).toBeUndefined()
+    })
+
+    it('defaults syncUrl back to true when no option was given', () => {
+        const index = useLaravelIndex(uniqueEndpoint())
+
+        index.reset()
+
+        expect(index.state.value.syncUrl).toBe(true)
+    })
+})
+
+describe('url sync mode', () => {
+    it('replaces rather than pushes, so filtering does not fill history', async () => {
+        const index = useLaravelIndex(uniqueEndpoint())
+
+        await index.load(2)
+
+        expect(replace).toHaveBeenCalled()
+        expect(push).not.toHaveBeenCalled()
+    })
+
+    it('can push instead when history entries are wanted', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), { historyMode: 'push' })
+
+        await index.load(2)
+
+        expect(push).toHaveBeenCalled()
+    })
+})
+
+describe('setConfig', () => {
+    it('accepts falsy values instead of silently ignoring them', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), {
+            syncUrl: true,
+            perPage: 25,
+        })
+
+        index.setConfig({ syncUrl: false })
+
+        expect(index.state.value.syncUrl).toBe(false)
     })
 })

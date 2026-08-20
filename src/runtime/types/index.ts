@@ -39,15 +39,22 @@ export type LaravelIndexState<T> = {
     filter: Filter
     __updated: Date
     __hash?: string
-    __ssr: boolean
 }
 
 export type LaravelIndexOptions = {
     perPage?: number
     syncUrl?: boolean
     sort?: string
-    ssr?: boolean
     key?: string
+    /**
+     * How URL sync writes to browser history.
+     *
+     * `replace` (the default) keeps a filter change or page step out of the
+     * history stack, so the back button leaves the list rather than walking
+     * back through every intermediate state. Use `push` when each page should
+     * be a separate history entry.
+     */
+    historyMode?: 'replace' | 'push'
     /**
      * Restrict which query-string keys are hydrated into `filter` on init.
      *

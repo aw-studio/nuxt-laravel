@@ -1,10 +1,9 @@
-import { useRoute, useRouter, useState } from 'nuxt/app'
+import { useNuxtApp, useRoute, useRouter, useState } from 'nuxt/app'
 import { computed, toRefs, watch } from 'vue'
 import { md5 } from '../utils/md5'
 import type {
     Filter,
     IndexResponse,
-    LaravelResponseMeta,
     LaravelIndexOptions,
     LaravelIndexState,
     LaravelIndex,
@@ -29,37 +28,40 @@ export function useLaravelIndex<T extends object>(
      * State for the laravel index.
      *
      */
-    const state = useState<LaravelIndexState<T>>(indexKey, () => ({
+    /**
+     * The state an index starts in. Used both to seed `useState` and by
+     * `reset()`, so the two can never drift apart - previously they used
+     * different fallbacks, and resetting silently turned URL sync on, invented
+     * a page size and replaced an unset sort with an empty string.
+     */
+    const initialState = (): LaravelIndexState<T> => ({
         items: [] as T[],
-        error: null as {
-            message: string
-            errors: { [key: string]: string[] }
-        } | null,
+        error: null,
         loading: false,
-        meta: undefined as LaravelResponseMeta | undefined,
-        page: undefined as number | undefined,
-        perPage: options?.perPage as number | undefined,
+        meta: undefined,
+        page: undefined,
+        perPage: options?.perPage,
         syncUrl: options?.syncUrl ?? true,
-        sort: options?.sort as string | undefined,
-        search: undefined as string | undefined,
+        sort: options?.sort,
+        search: undefined,
         filter: {} as Filter,
         __updated: new Date(),
-        __hash: undefined as string | undefined,
-        __ssr: options?.ssr ?? false,
-    }))
+        __hash: undefined,
+    })
+
+    const state = useState<LaravelIndexState<T>>(indexKey, initialState)
 
     const setConfig = (config: LaravelIndexOptions) => {
-        if (config.perPage) {
+        // Presence, not truthiness: `{ syncUrl: false }` and `{ perPage: 0 }`
+        // are meaningful and used to be silently discarded.
+        if (config.perPage !== undefined) {
             state.value.perPage = config.perPage
         }
-        if (config.syncUrl) {
+        if (config.syncUrl !== undefined) {
             state.value.syncUrl = config.syncUrl
         }
-        if (config.sort) {
+        if (config.sort !== undefined) {
             state.value.sort = config.sort
-        }
-        if (config.ssr) {
-            state.value.__ssr = config.ssr
         }
     }
 
@@ -94,7 +96,15 @@ export function useLaravelIndex<T extends object>(
             if (!append) {
                 state.value.items = []
             }
-            state.value.error = e.response._data
+
+            // A network failure rejects with a plain Error and no `response`.
+            // Reading e.response._data used to throw a TypeError inside this
+            // block, masking the original cause.
+            state.value.error = e?.response?._data ??
+                e?.response?.data ?? {
+                    message: e?.message ?? 'Request failed',
+                    errors: {},
+                }
 
             if (options?.onError) {
                 options.onError(e)
@@ -189,7 +199,13 @@ export function useLaravelIndex<T extends object>(
         }
 
         if (state.value.syncUrl) {
-            router.push({
+            // `replace` by default: a filter tweak or page step is not a
+            // navigation, and pushing made the back button walk through every
+            // intermediate list state.
+            const navigate =
+                options?.historyMode === 'push' ? router.push : router.replace
+
+            navigate({
                 query: {
                     ...route.query,
                     page: state.value.page,
@@ -298,6 +314,18 @@ export function useLaravelIndex<T extends object>(
         state.value.filter = buildFilterFromQuery(q, options?.urlFilters)
     }
 
+    // The Nuxt app instance is per-request on the server and per-session on the
+    // client, so this registry is SSR-safe and cannot leak between requests.
+    // Registering per call site meant every component that used an index added
+    // a watcher that was never torn down.
+    const nuxtApp = useNuxtApp() as unknown as {
+        __laravelIndexWatchers?: Set<string>
+    }
+    const registered = (nuxtApp.__laravelIndexWatchers ??= new Set<string>())
+    const alreadyWatching = registered.has(indexKey)
+
+    registered.add(indexKey)
+
     watch(
         [
             () => state.value.sort,
@@ -305,6 +333,10 @@ export function useLaravelIndex<T extends object>(
             () => state.value.filter,
         ],
         () => {
+            if (alreadyWatching) {
+                return
+            }
+
             if (!hasChanges()) {
                 return
             }
@@ -318,19 +350,7 @@ export function useLaravelIndex<T extends object>(
     )
 
     const reset = () => {
-        state.value.items = []
-        state.value.error = null
-        state.value.loading = false
-        state.value.meta = undefined
-        state.value.page = undefined
-        state.value.perPage = options?.perPage || 10
-        state.value.syncUrl = options?.syncUrl ?? false
-        state.value.sort = options?.sort || ''
-        state.value.search = undefined
-        state.value.filter = {}
-        state.value.__updated = new Date()
-        state.value.__hash = undefined
-        state.value.__ssr = options?.ssr ?? false
+        state.value = initialState()
     }
 
     return {
