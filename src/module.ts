@@ -22,12 +22,14 @@ export default defineNuxtModule<ModuleOptions>({
     meta: {
         name: MODULE_NAME,
         configKey: 'laravel',
+        compatibility: {
+            nuxt: '>=3.17.0',
+        },
     },
     defaults: defaultModuleOptions,
     setup(_options, _nuxt) {
         const resolver = createResolver(import.meta.url)
 
-        // @ts-expect-error: _nuxt.options.runtimeConfig is not defined in Nuxt 3
         _nuxt.options.runtimeConfig.public.laravel = defu(
             _nuxt.options.runtimeConfig.public.laravel as ModuleOptions,
             _options
