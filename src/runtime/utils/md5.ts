@@ -27,11 +27,11 @@ export const md5 = (inputString: string): string => {
         q: number,
         a: number,
         b: number,
-        x: number,
+        x: number | undefined,
         s: number,
         t: number
     ): number {
-        return ad(rl(ad(ad(a, q), ad(x, t)), s), b)
+        return ad(rl(ad(ad(a, q), ad(x ?? 0, t)), s), b)
     }
 
     function ff(
@@ -39,7 +39,7 @@ export const md5 = (inputString: string): string => {
         b: number,
         c: number,
         d: number,
-        x: number,
+        x: number | undefined,
         s: number,
         t: number
     ): number {
@@ -51,7 +51,7 @@ export const md5 = (inputString: string): string => {
         b: number,
         c: number,
         d: number,
-        x: number,
+        x: number | undefined,
         s: number,
         t: number
     ): number {
@@ -63,7 +63,7 @@ export const md5 = (inputString: string): string => {
         b: number,
         c: number,
         d: number,
-        x: number,
+        x: number | undefined,
         s: number,
         t: number
     ): number {
@@ -75,7 +75,7 @@ export const md5 = (inputString: string): string => {
         b: number,
         c: number,
         d: number,
-        x: number,
+        x: number | undefined,
         s: number,
         t: number
     ): number {
@@ -86,9 +86,10 @@ export const md5 = (inputString: string): string => {
         const nblk = ((x.length + 8) >> 6) + 1
         const blks: number[] = Array.from({ length: nblk * 16 }, () => 0)
         for (let i = 0; i < x.length; i++) {
-            blks[i >> 2] |= x.charCodeAt(i) << ((i % 4) * 8)
+            blks[i >> 2] = (blks[i >> 2] ?? 0) | (x.charCodeAt(i) << ((i % 4) * 8))
         }
-        blks[x.length >> 2] |= 0x80 << ((x.length % 4) * 8)
+        blks[x.length >> 2] =
+            (blks[x.length >> 2] ?? 0) | (0x80 << ((x.length % 4) * 8))
         blks[nblk * 16 - 2] = x.length * 8
         return blks
     }

@@ -250,9 +250,11 @@ export function useLaravelIndex<T extends object>(
             return item[idKey as keyof typeof item] === id
         })
 
-        if (index !== -1) {
+        const existing = state.value.items[index]
+
+        if (index !== -1 && existing) {
             state.value.items[index] = {
-                ...state.value.items[index],
+                ...existing,
                 ...data,
             }
         }
@@ -307,11 +309,11 @@ export function useLaravelIndex<T extends object>(
                 return
             }
 
-            if (state.value.page) {
-                load(1)
-            } else {
-                loadAll()
-            }
+            // Always reload the first page. Branching on `state.page` here used
+            // to send the very first sort/search/filter change down `loadAll()`,
+            // which clears `perPage` — permanently discarding the configured
+            // page size before the list had ever loaded.
+            load(1)
         }
     )
 

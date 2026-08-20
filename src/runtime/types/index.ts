@@ -102,6 +102,10 @@ export type FilterOperatorOption =
     | { $containsi: string | number }
     | { $notContainsi: string | number }
     | { $between: [string | number, string | number] }
+    | { $startsWith: string | number }
+    | { $endsWith: string | number }
+    | { $null: boolean }
+    | { $notNull: boolean }
 
 export type Filter =
     | { [key: string]: FilterOperatorOption | string | number | boolean }
