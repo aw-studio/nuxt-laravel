@@ -2,7 +2,7 @@
     <div>
         <h1>Test Page</h1>
         <p>This is a test page.</p>
-        <pre>{{ data?.bar }}</pre>
+        <pre>{{ data?.foo }}</pre>
         <pre>{{ items[0]?.foo }}</pre>
         {{ form.fields.bar.baz }}
     </div>

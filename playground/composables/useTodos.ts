@@ -59,10 +59,12 @@ export const useTodos = useLaravelCrud<Todo, TodoForm>({
         completed: false,
     },
     schema,
-    onCreateSuccess: response => {
-        console.log('Todo created successfully:', response)
-    },
-    onCreateError: error => {
-        console.error('Error creating todo:', error)
+    create: {
+        onSuccess: (response: unknown) => {
+            console.log('Todo created successfully:', response)
+        },
+        onError: (error: unknown) => {
+            console.error('Error creating todo:', error)
+        },
     },
 })

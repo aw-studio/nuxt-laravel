@@ -24,7 +24,7 @@
             <button
                 type="button"
                 @click="
-                    form.fields.subtasks.push({ title: '', completed: false })
+                    form.fields.subtasks?.push({ title: '', completed: false })
                 "
             >
                 Add Subtask

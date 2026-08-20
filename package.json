@@ -1,8 +1,11 @@
 {
     "name": "@aw-studio/nuxt-laravel",
-    "version": "0.0.44",
-    "description": "Nuxt Laravel",
-    "repository": "aw-studio/nuxt-laravel",
+    "version": "1.0.0",
+    "description": "Sanctum auth, a typed HTTP client, filterable model indexes and Zod-validated forms for consuming a Laravel API from Nuxt 3 or 4.",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/aw-studio/nuxt-laravel.git"
+    },
     "license": "MIT",
     "type": "module",
     "author": "Jannes Behrens",
@@ -21,7 +24,9 @@
         }
     },
     "files": [
-        "dist"
+        "dist",
+        "CHANGELOG.md",
+        "UPGRADE.md"
     ],
     "publishConfig": {
         "access": "public"
@@ -35,30 +40,54 @@
         "lint": "eslint .",
         "test": "vitest run",
         "test:watch": "vitest watch",
-        "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit"
+        "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit",
+        "test:coverage": "vitest run --coverage"
     },
     "dependencies": {
-        "@nuxt/kit": "^3.17.5",
+        "@nuxt/kit": "^3.17.5 || ^4.0.0",
         "@vee-validate/zod": "^4.15.1",
-        "defu": "^6.1.4",
-        "eslint-config-prettier": "^10.1.5",
-        "laravel-echo": "^2.1.6",
-        "pusher-js": "^8.4.0",
-        "vee-validate": "^4.15.1",
-        "zod": "^3.25.67"
+        "defu": "^6.1.7",
+        "vee-validate": "^4.15.1"
     },
     "devDependencies": {
-        "@nuxt/devtools": "^2.5.0",
-        "@nuxt/eslint-config": "^1.4.1",
-        "@nuxt/module-builder": "^1.0.1",
-        "@nuxt/schema": "^3.17.5",
-        "@nuxt/test-utils": "^3.19.1",
+        "@nuxt/devtools": "^3.4.1",
+        "@nuxt/eslint-config": "^1.17.0",
+        "@nuxt/module-builder": "^1.0.3",
+        "@nuxt/test-utils": "^4.1.0",
         "@types/node": "latest",
-        "changelogen": "^0.6.1",
-        "eslint": "^9.29.0",
-        "nuxt": "^3.17.5",
-        "typescript": "~5.8.3",
-        "vitest": "^3.2.4",
-        "vue-tsc": "^2.2.10"
+        "@vitest/coverage-v8": "^4.1.11",
+        "changelogen": "^0.6.2",
+        "eslint": "^10.8.1",
+        "eslint-config-prettier": "^10.1.5",
+        "happy-dom": "^20.11.6",
+        "nuxt": "^4.5.2",
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.11",
+        "vue-tsc": "^3.3.10",
+        "zod": "^4.4.3"
+    },
+    "peerDependencies": {
+        "zod": "^3.24.0 || ^4.0.0"
+    },
+    "overrides": {
+        "@vee-validate/zod": {
+            "zod": "$zod"
+        }
+    },
+    "keywords": [
+        "nuxt",
+        "nuxt-module",
+        "laravel",
+        "sanctum",
+        "api",
+        "zod",
+        "vee-validate",
+        "crud",
+        "pagination",
+        "filtering"
+    ],
+    "homepage": "https://github.com/aw-studio/nuxt-laravel",
+    "bugs": {
+        "url": "https://github.com/aw-studio/nuxt-laravel/issues"
     }
 }

@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import { useAsyncData } from 'nuxt/app'
 import type { LaravelGetOptions, ModelResponse } from '../types'
 import { useLaravelApi } from './useLaravelApi'
@@ -8,7 +8,7 @@ export async function useLaravelGet<T extends Record<string, any>>(
     options?: LaravelGetOptions
 ): Promise<{
     loading: Ref<boolean>
-    data: Ref<T | null>
+    data: ComputedRef<T | null>
     error: Ref<any>
     refresh: () => Promise<void>
 }> {
@@ -26,12 +26,11 @@ export async function useLaravelGet<T extends Record<string, any>>(
 
         try {
             const response: ModelResponse<T> = await get(endpoint)
+
             return response.data
-        } catch (error) {
-            console.error('Error loading model:', error)
-            throw error
         } finally {
-            // Ensure loading is set to false even if an error occurs
+            // Runs on the failure path too. The rejection propagates to
+            // useAsyncData, which records it on `error` for the caller.
             loading.value = false
         }
     }
@@ -45,7 +44,10 @@ export async function useLaravelGet<T extends Record<string, any>>(
 
     return {
         loading,
-        data: data as Ref<T | null>,
+        // useAsyncData yields `undefined` when the request fails. Normalising
+        // to null keeps the declared type honest - it was previously cast to
+        // `Ref<T | null>`, which was simply untrue on the error path.
+        data: computed<T | null>(() => (data.value as T | undefined) ?? null),
         error,
         refresh,
     }

@@ -1,4 +1,4 @@
-import type { ModuleOptions } from '~/src/module'
+import type { ModuleOptions } from '../types'
 import { useRuntimeConfig } from '#imports'
 
 export const useLaravelConfig = (): ModuleOptions => {

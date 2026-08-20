@@ -6,7 +6,7 @@
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-An opinionated Nuxt 3 toolkit for consuming a Laravel API: Sanctum (cookie/SPA)
+An opinionated Nuxt 3/4 toolkit for consuming a Laravel API: Sanctum (cookie/SPA)
 authentication, a typed HTTP client, stateful & filterable model indexes,
 Zod-validated forms with Laravel error mapping, and CRUD helpers — all
 auto-imported.
@@ -16,6 +16,7 @@ package on the backend for the filtering/sorting/pagination API.
 
 - [Features](#features)
 - [Setup](#setup)
+- [Backend contract](#backend-contract)
 - [Authentication (Sanctum)](#authentication-sanctum)
 - [HTTP Client — `useLaravelApi`](#http-client--uselaravelapi)
 - [Fetching a single model — `useLaravelGet`](#fetching-a-single-model--uselaravelget)
@@ -31,7 +32,6 @@ package on the backend for the filtering/sorting/pagination API.
   - [Mutating State](#mutating-state)
 - [Forms — `useLaravelForm`](#forms--uselaravelform)
 - [CRUD — `useLaravelCrud`](#crud--uselaravelcrud)
-- [Resource CRUD — `useLaravelCrudResource`](#resource-crud--uselaravelcrudresource)
 - [Example](#example)
 - [Contribution](#contribution)
 
@@ -52,6 +52,37 @@ package on the backend for the filtering/sorting/pagination API.
 ```bash
 npm i @aw-studio/nuxt-laravel
 ```
+
+**Requirements**
+
+| Dependency | Supported            |
+| ---------- | -------------------- |
+| Nuxt       | `3.17+` and `4.x`    |
+| zod        | `^3.24.0 \|\| ^4.0.0` |
+| [`aw-studio/laravel-model-index`](https://github.com/aw-studio/laravel-model-index) | `1.x` |
+
+The backend package is released as a pair with this one. Because the coupling is
+an untyped query string, mixing majors is not supported.
+
+`zod` is a **peer dependency**: you install it, and your version is the one the
+module uses. This matters because you pass your own zod schemas into
+`useLaravelForm` / `useLaravelCrud` — if the module bundled its own copy you
+could end up with two zod instances, where schemas built by one are not
+recognised by the other.
+
+```bash
+npm i zod
+```
+
+> **Note for zod 4 users.** `@vee-validate/zod` (used internally) still declares
+> a `zod@^3.24.0` peer, so npm may report `ERESOLVE` when you install zod 4
+> alongside it. zod 4 is tested and works — both majors are covered in CI. Until
+> that peer range is widened upstream, add an override:
+>
+> ```jsonc
+> // package.json
+> "overrides": { "@vee-validate/zod": { "zod": "$zod" } }
+> ```
 
 ### 2. Configure
 
@@ -78,22 +109,102 @@ See the [Laravel Sanctum SPA docs](https://laravel.com/docs/sanctum#spa-authenti
 and [Laravel Model Index](https://github.com/aw-studio/laravel-model-index) for
 the index/filter API.
 
+## Backend contract
+
+This module and
+[`aw-studio/laravel-model-index`](https://github.com/aw-studio/laravel-model-index)
+are coupled **only by the query string**. There is no generated client and no shared
+schema, so a mismatch is invisible until runtime.
+
+`useLaravelIndex` serializes state into exactly this shape:
+
+```
+?filter[price][$lte]=100&filter[name][$containsi]=shirt&sort=-created_at&search=foo&page=2&perPage=25
+```
+
+and expects Laravel's standard resource envelope back:
+
+```jsonc
+{
+  "data": [ /* items */ ],
+  "meta": { "total": 120, "per_page": 25, "current_page": 2, "last_page": 5, "from": 26, "to": 50 },
+  "links": { "first": "…", "last": "…", "prev": "…", "next": null }
+}
+```
+
+Two consequences worth knowing:
+
+- **`meta` only exists if the backend actually paginates.** `Model::index()->get()`
+  returns a bare collection unless the request carries `page` or `perPage`, so
+  `hasNextPage`, `loadMore()` and the page controls stay inert. Send a `perPage`, or
+  have the backend call `paginate()` explicitly.
+- **Filter and sort fields must be allowlisted server-side.** The backend rejects
+  unknown filter fields, unknown operators, and — once
+  `IndexQueryBuilder::defaultSortable([])` is in use — unknown sort fields, with a
+  `400`-class error rather than silently ignoring them.
+
+> [!NOTE]
+> Several operators on one key are ANDed — `{ price: { $gte: 18, $lte: 30 } }`
+> becomes `price >= 18 and price <= 30`. Inside an `$or` branch they take the
+> group's boolean and are ORed instead, so use `$between` for a range there.
+
 ## Authentication (Sanctum)
 
-`useLaravelSanctum` primes the CSRF cookie; afterwards every request made
-through the client automatically sends the `X-XSRF-TOKEN` header and includes
-credentials.
+`useLaravelSanctum` covers the whole SPA cookie flow. This is stateful cookie
+auth, not token auth: the browser holds a session cookie, and every request made
+through the client sends it along with the `X-XSRF-TOKEN` header.
 
 ```ts
-const { csrf } = useLaravelSanctum()
-const { post, get } = useLaravelApi()
+const { user, isAuthenticated, login, logout, fetchUser } = useLaravelSanctum<User>()
 
-// Prime the XSRF cookie, then log in
-await csrf()
-await post('/login', { email, password })
+await login({ email, password })   // primes CSRF, posts, then loads the user
+console.log(user.value)            // the authenticated user
+await logout()                     // clears the session and the cached user
+```
 
-// Subsequent authenticated requests just work
-const user = await get('/api/user')
+| Returns | Type | |
+| --- | --- | --- |
+| `user` | `Ref<TUser \| null>` | The authenticated user, shared app-wide |
+| `isAuthenticated` | `ComputedRef<boolean>` | Whether `user` is set |
+| `loading` | `Ref<boolean>` | True while `fetchUser` is in flight |
+| `login(credentials)` | `Promise` | Primes CSRF, posts, then loads the user |
+| `logout()` | `Promise` | Clears the session and the cached user |
+| `fetchUser()` | `Promise<TUser \| null>` | Loads the user, or `null` for a guest |
+| `csrf()` | `Promise` | Primes the XSRF cookie by itself |
+
+`fetchUser()` resolves to `null` on a `401` or `419` rather than throwing — a
+guest is an expected answer, not an error, so asking "is anyone logged in" does
+not need a `try/catch`. Genuine failures still throw.
+
+Restore the session on app start with a plugin or middleware:
+
+```ts
+export default defineNuxtRouteMiddleware(async () => {
+  const { isAuthenticated, fetchUser } = useLaravelSanctum()
+
+  if (!isAuthenticated.value) {
+    await fetchUser()
+  }
+
+  if (!isAuthenticated.value) {
+    return navigateTo('/login')
+  }
+})
+```
+
+### Multiple guards
+
+Point the composable at different routes and give it its own state key to run
+more than one guard side by side:
+
+```ts
+export const useMemberAuth = () =>
+  useLaravelSanctum<Member>({
+    key: 'member',
+    loginEndpoint: '/member/login',
+    logoutEndpoint: '/member/logout',
+    userEndpoint: '/api/member',
+  })
 ```
 
 ## HTTP Client — `useLaravelApi`
@@ -136,6 +247,21 @@ The `useLaravelIndex` composable provides a stateful, filterable Laravel API
 index. Pass the relative endpoint as the first argument — it also serves as the
 default state key, so keep it unique (or set `key`).
 
+> [!IMPORTANT]
+> State is stored in `useState(key ?? \`index-${endpoint}\`)`, so **every call site using
+> the same endpoint shares one state object**. That is what makes the index work across
+> components without a store — but two independent lists over the same endpoint (say a
+> sidebar preview and a full table) will fight over page and filters. Give one of them
+> its own `key`.
+
+State is shared per key, which is the point: a page can `load()` while child
+components read `items` from the same composable without a store. The flip side
+is that two *unrelated* lists over one endpoint will fight over page and filters
+— give one of them its own `key`.
+
+Only the first caller's options seed the state, since the initialiser runs once
+per key. Configure the index where you `load()` it, not in every consumer.
+
 It is typically wrapped in a reusable composable:
 
 ```ts
@@ -161,11 +287,12 @@ const { items } = await useProducts({
 
 | Option       | Type                      | Default     | Description                                                            |
 | ------------ | ------------------------- | ----------- | --------------------------------------------------------------------- |
-| `perPage`    | `number`                  | —           | Items per page.                                                       |
+| `perPage`    | `number`                  | —           | Items per page. Preserved across sort/search/filter changes.          |
 | `syncUrl`    | `boolean`                 | `true`      | Mirror state to the query string and hydrate from it on init.        |
 | `sort`       | `string`                  | —           | Initial sort.                                                         |
-| `ssr`        | `boolean`                 | `false`     | Load items during server-side rendering.                             |
-| `key`        | `string`                  | endpoint    | Override the shared state key.                                        |
+| `key`         | `string`                 | endpoint    | Override the shared state key.                                        |
+| `historyMode` | `'replace' \| 'push'`    | `'replace'` | Whether URL sync adds browser history entries.                        |
+| `paginationMode` | `'page' \| 'cursor'` | `'page'`    | Which backend paginator to pair with (see below).                     |
 | `urlFilters` | `string[]`                | `undefined` | Allowlist of query keys to hydrate into the filter (see below).      |
 | `onError`    | `(error) => void`         | —           | Called when a request fails.                                          |
 | `onSuccess`  | `(response) => void`      | —           | Called on a successful response.                                      |
@@ -182,11 +309,17 @@ setSyncUrl(false)
 
 ### SSR
 
-Pass `ssr: true` to load items during server-side rendering:
+Await `load()` in setup. The request runs on the server and the state is
+transferred to the client through Nuxt's payload, so the list renders with data
+and does not refetch on hydration:
 
 ```ts
-const { items } = await useProducts({ perPage: 6, ssr: true })
+const { items, load } = useProducts({ perPage: 6 })
+
+await load()
 ```
+
+State is keyed per endpoint (see below), which is what makes that transfer work.
 
 ### Data Fetching
 
@@ -198,6 +331,8 @@ await load(6)       // load a specific page
 await nextPage()    // next page
 await prevPage()    // previous page
 await loadAll()     // load every item, unpaginated
+                    // a later sort/search/filter change reloads page 1
+                    // paginated, rather than re-fetching everything
 await loadMore()    // append the next page (infinite scrolling)
 ```
 
@@ -250,14 +385,33 @@ setFilter({
 | `$containsi`    | Contains (case-insensitive)  |
 | `$notContainsi` | Not contains (case-insens.)  |
 | `$between`      | Between two values           |
+| `$startsWith`   | Starts with                  |
+| `$endsWith`     | Ends with                    |
+| `$null`         | Is null                      |
+| `$notNull`      | Is not null                  |
 
 Combine groups with `$and` / `$or`.
+
+> This table must stay in sync with the operators implemented in
+> [`aw-studio/laravel-model-index`](https://github.com/aw-studio/model-index).
+> The two packages are coupled only by the query string, so an operator listed
+> here but missing there is rejected at runtime with an
+> `Unsupported operator` error.
+
+The `i`-suffixed operators compare case-insensitively. Note that MySQL's default
+collation already ignores case, so on MySQL they behave identically to their
+plain counterparts; the difference shows up on PostgreSQL and SQLite.
 
 ### URL sync & `urlFilters`
 
 When `syncUrl` is enabled, the index mirrors page, sort, search, and filters
 into the query string and hydrates them back on init — so a shared/bookmarked
 URL restores the list state.
+
+Writes use `router.replace` by default, so stepping through pages or adjusting
+filters does not fill the history stack — the back button leaves the list rather
+than walking back through every intermediate state. Pass
+`historyMode: 'push'` if each page should be its own history entry.
 
 By default, **every** unknown query param is hydrated as a filter. This can leak
 state between pages: e.g. one index sets `?is_active=1`, the user navigates to an
@@ -277,6 +431,33 @@ export const useVehicleGroups = (options?: LaravelIndexOptions) =>
     ...options,
   })
 ```
+
+### Cursor pagination
+
+For large lists, pair with the backend's `cursorPaginate()` instead. Cursor
+pagination is keyset-based: no `COUNT` over the full result set, and no `OFFSET`
+degradation on deep pages.
+
+```ts
+const { items, load, loadMore, hasNextPage } = useLaravelIndex<Product>(
+  '/api/products',
+  { paginationMode: 'cursor', perPage: 25 }
+)
+
+await load()        // first page
+loadMore()          // follows next_cursor, appending
+```
+
+The trade-off is that a cursor paginator gives up `total` and `last_page`, so:
+
+- `hasNextPage` comes from the cursor rather than a page count
+- `hasPrevPage`, `nextPage`, `prevPage` and `setPage` do not apply
+- `meta.total` and `meta.last_page` are absent, so a numbered pager cannot be
+  rendered — this mode suits infinite scroll
+
+`load()` always restarts from the top; `loadMore()` is what carries the cursor
+forward. Changing sort, search or a filter resets the cursor, since a stale one
+points into the previous result set.
 
 ### Sorting
 
@@ -360,57 +541,79 @@ const form = useLaravelForm<LoginForm>({
 
 ## CRUD — `useLaravelCrud`
 
-Composes index/get/form into a single resource bound to one `endpoint`,
-`schema`, and `initialValues`.
+Composes index, get and form helpers into one resource API. Every operation
+resolves to a URL and a verb:
+
+| Operation | Verb | URL |
+| --- | --- | --- |
+| `index()` | GET | `{urlPrefix}/{endpoint}` |
+| `show(id)` | GET | `{urlPrefix}/{endpoint}/{id}` |
+| `create()` | POST | `{urlPrefix}/{endpoint}` |
+| `update(model)` | PUT | `{urlPrefix}/{endpoint}/{id}` |
+| `destroy(id)` | DELETE | `{urlPrefix}/{endpoint}/{id}` |
 
 ```ts
-import * as z from 'zod'
+import { z } from 'zod'
 
-type Todo = { id: number; title: string; completed: boolean }
-type TodoForm = Omit<Todo, 'id'>
+export const useProducts = () =>
+  useLaravelCrud<Product, ProductForm>({
+    endpoint: '/api/products',
+    schema: z.object({ name: z.string().min(1) }),
+    initialValues: { name: '' },
+  })
+```
 
-export const useTodos = useLaravelCrud<Todo, TodoForm>({
-  endpoint: '/api/todos',
-  initialValues: { title: '', completed: false },
-  schema: z.object({
-    title: z.string().min(1),
-    completed: z.boolean().default(false),
-  }),
-  onCreateSuccess: res => console.log('created', res),
+```vue
+<script setup lang="ts">
+const { index, create, update, destroy } = useProducts()
+
+const { items, load } = index({ perPage: 25 })
+await load()
+
+const form = create()
+await form.submit()
+</script>
+```
+
+### Per-operation configuration
+
+Any operation can override the endpoint, schema, initial values or callbacks.
+An endpoint containing `:id` has it substituted:
+
+```ts
+useLaravelCrud<Product, ProductForm>({
+  endpoint: '/api/products',
+  schema,
+  initialValues,
+
+  // applied to every operation unless overridden per call
+  urlPrefix: '/admin',
+
+  create: { onSuccess: () => refresh() },
+  update: { schema: updateSchema },
+  destroy: { endpoint: '/api/products/:id/archive' },
+
+  index: { options: { perPage: 25, syncUrl: true } },
+  show: { options: { query: { with: 'variants' } } },
+
+  // merged into the returned object
+  methods: {
+    publish: (id: number) => useLaravelApi().post(`/api/products/${id}/publish`, {}),
+  },
 })
 ```
 
-```ts
-const { index, show, create, update, destroy } = useTodos
+`destroy` deliberately does **not** inherit the resource schema — a `DELETE`
+sends no meaningful body, and validating an empty payload against the create
+schema would reject every delete. Give it its own `schema` if you do need one.
 
-const list = await index({ perPage: 10 }) // → useLaravelIndex
-const one = await show('1')               // → useLaravelGet
-const createForm = create()               // → useLaravelForm (POST)
-const editForm = update(todo)             // → useLaravelForm (PUT /api/todos/:id)
-const deleteForm = destroy(todo)          // → useLaravelForm (DELETE)
-```
-
-## Resource CRUD — `useLaravelCrudResource`
-
-A more configurable factory when operations need different endpoints, schemas,
-initial values, callbacks, a `:id` placeholder, a `urlPrefix`, or extra custom
-methods.
+A `urlPrefix` can also be passed per call, which is useful when the same
+resource is reachable under more than one prefix:
 
 ```ts
-const useArticles = () =>
-  useLaravelCrudResource<{ index: Article }, { create: ArticleForm }>({
-    config: { endpoint: '/api/articles', schema, initialValues },
-    show: { options: { query: { with: 'author' } } },
-    update: { endpoint: '/api/articles/:id/publish' },
-    methods: {
-      archive: (id: number) => useLaravelApi().post(`/api/articles/${id}/archive`, {}),
-    },
-  })
+const { create } = useProducts()
 
-const { index, show, create, update, destroy, archive } = useArticles()
-
-// Optionally scope endpoints with a urlPrefix
-const list = index(undefined, { urlPrefix: '/admin' })
+create({ urlPrefix: '/admin' })   // POST /admin/api/products
 ```
 
 ## Example

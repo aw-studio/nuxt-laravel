@@ -1,10 +1,8 @@
-import { useRoute, useRouter, useState } from 'nuxt/app'
+import { useNuxtApp, useRoute, useRouter, useState } from 'nuxt/app'
 import { computed, toRefs, watch } from 'vue'
-import { md5 } from '../utils/md5'
 import type {
     Filter,
     IndexResponse,
-    LaravelResponseMeta,
     LaravelIndexOptions,
     LaravelIndexState,
     LaravelIndex,
@@ -29,37 +27,43 @@ export function useLaravelIndex<T extends object>(
      * State for the laravel index.
      *
      */
-    const state = useState<LaravelIndexState<T>>(indexKey, () => ({
+    /**
+     * The state an index starts in. Used both to seed `useState` and by
+     * `reset()`, so the two can never drift apart - previously they used
+     * different fallbacks, and resetting silently turned URL sync on, invented
+     * a page size and replaced an unset sort with an empty string.
+     */
+    const isCursorMode = options?.paginationMode === 'cursor'
+
+    const initialState = (): LaravelIndexState<T> => ({
         items: [] as T[],
-        error: null as {
-            message: string
-            errors: { [key: string]: string[] }
-        } | null,
+        error: null,
         loading: false,
-        meta: undefined as LaravelResponseMeta | undefined,
-        page: undefined as number | undefined,
-        perPage: options?.perPage as number | undefined,
+        meta: undefined,
+        page: undefined,
+        perPage: options?.perPage,
         syncUrl: options?.syncUrl ?? true,
-        sort: options?.sort as string | undefined,
-        search: undefined as string | undefined,
+        sort: options?.sort,
+        search: undefined,
         filter: {} as Filter,
+        cursor: undefined,
         __updated: new Date(),
-        __hash: undefined as string | undefined,
-        __ssr: options?.ssr ?? false,
-    }))
+        __hash: undefined,
+    })
+
+    const state = useState<LaravelIndexState<T>>(indexKey, initialState)
 
     const setConfig = (config: LaravelIndexOptions) => {
-        if (config.perPage) {
+        // Presence, not truthiness: `{ syncUrl: false }` and `{ perPage: 0 }`
+        // are meaningful and used to be silently discarded.
+        if (config.perPage !== undefined) {
             state.value.perPage = config.perPage
         }
-        if (config.syncUrl) {
+        if (config.syncUrl !== undefined) {
             state.value.syncUrl = config.syncUrl
         }
-        if (config.sort) {
+        if (config.sort !== undefined) {
             state.value.sort = config.sort
-        }
-        if (config.ssr) {
-            state.value.__ssr = config.ssr
         }
     }
 
@@ -89,12 +93,25 @@ export function useLaravelIndex<T extends object>(
             }
 
             state.value.meta = response.meta
-            state.value.page = response.meta?.current_page
+
+            if (isCursorMode) {
+                state.value.cursor = response.meta?.next_cursor ?? null
+            } else {
+                state.value.page = response.meta?.current_page
+            }
         } catch (e: any) {
             if (!append) {
                 state.value.items = []
             }
-            state.value.error = e.response._data
+
+            // A network failure rejects with a plain Error and no `response`.
+            // Reading e.response._data used to throw a TypeError inside this
+            // block, masking the original cause.
+            state.value.error = e?.response?._data ??
+                e?.response?.data ?? {
+                    message: e?.message ?? 'Request failed',
+                    errors: {},
+                }
 
             if (options?.onError) {
                 options.onError(e)
@@ -107,9 +124,16 @@ export function useLaravelIndex<T extends object>(
     }
 
     const hasNextPage = computed(() => {
+        // A cursor paginator has no last_page; a null next_cursor means the
+        // result set is exhausted.
+        if (isCursorMode) {
+            return !!state.value.cursor
+        }
+
         return !!(
             state.value.meta &&
             state.value.meta.current_page &&
+            state.value.meta.last_page &&
             state.value.meta.current_page < state.value.meta.last_page
         )
     })
@@ -180,7 +204,13 @@ export function useLaravelIndex<T extends object>(
         // if no page is passed and syncUrl is disabled, set the current page to 1.
         // then, if syncUrl is enabled, update the URL with the new page
 
-        if (page) {
+        if (isCursorMode) {
+            // Page numbers are meaningless here, and load() means "from the
+            // top" — carrying the cursor over would silently return a slice
+            // from the middle. loadMore() bypasses this and keeps the cursor.
+            state.value.page = undefined
+            state.value.cursor = undefined
+        } else if (page) {
             state.value.page = page
         } else if (state.value.syncUrl) {
             state.value.page = Number(route.query.page) || 1
@@ -189,7 +219,13 @@ export function useLaravelIndex<T extends object>(
         }
 
         if (state.value.syncUrl) {
-            router.push({
+            // `replace` by default: a filter tweak or page step is not a
+            // navigation, and pushing made the back button walk through every
+            // intermediate list state.
+            const navigate =
+                options?.historyMode === 'push' ? router.push : router.replace
+
+            navigate({
                 query: {
                     ...route.query,
                     page: state.value.page,
@@ -212,11 +248,17 @@ export function useLaravelIndex<T extends object>(
     }
 
     const loadMore = () => {
-        if (state.value.loading) {
+        if (state.value.loading || !state.value.meta) {
             return
         }
 
-        if (!state.value.meta) {
+        if (isCursorMode) {
+            if (!state.value.cursor) {
+                return
+            }
+
+            fetchFromApi(true)
+
             return
         }
 
@@ -250,24 +292,27 @@ export function useLaravelIndex<T extends object>(
             return item[idKey as keyof typeof item] === id
         })
 
-        if (index !== -1) {
+        const existing = state.value.items[index]
+
+        if (index !== -1 && existing) {
             state.value.items[index] = {
-                ...state.value.items[index],
+                ...existing,
                 ...data,
             }
         }
     }
 
     const hasChanges = () => {
-        const newHash = md5(
-            JSON.stringify({
-                sort: state.value.sort,
-                search: state.value.search,
-                filter: state.value.filter,
-            })
-        )
+        // The serialized value is the fingerprint. Hashing it added 180 lines
+        // of bit-twiddling to compare two short strings, and a hash can only
+        // ever collide where the string cannot.
+        const newHash = JSON.stringify({
+            sort: state.value.sort,
+            search: state.value.search,
+            filter: state.value.filter,
+        })
 
-        // Compare with previous hash
+        // Compare with previous fingerprint
         const changed = state.value.__hash !== newHash
 
         if (changed) {
@@ -296,6 +341,18 @@ export function useLaravelIndex<T extends object>(
         state.value.filter = buildFilterFromQuery(q, options?.urlFilters)
     }
 
+    // The Nuxt app instance is per-request on the server and per-session on the
+    // client, so this registry is SSR-safe and cannot leak between requests.
+    // Registering per call site meant every component that used an index added
+    // a watcher that was never torn down.
+    const nuxtApp = useNuxtApp() as unknown as {
+        __laravelIndexWatchers?: Set<string>
+    }
+    const registered = (nuxtApp.__laravelIndexWatchers ??= new Set<string>())
+    const alreadyWatching = registered.has(indexKey)
+
+    registered.add(indexKey)
+
     watch(
         [
             () => state.value.sort,
@@ -303,32 +360,28 @@ export function useLaravelIndex<T extends object>(
             () => state.value.filter,
         ],
         () => {
+            if (alreadyWatching) {
+                return
+            }
+
             if (!hasChanges()) {
                 return
             }
 
-            if (state.value.page) {
-                load(1)
-            } else {
-                loadAll()
-            }
+            // A stale cursor points into the old result set; carrying it over
+            // would return an arbitrary slice of the new one.
+            state.value.cursor = undefined
+
+            // Always reload the first page. Branching on `state.page` here used
+            // to send the very first sort/search/filter change down `loadAll()`,
+            // which clears `perPage` — permanently discarding the configured
+            // page size before the list had ever loaded.
+            load(1)
         }
     )
 
     const reset = () => {
-        state.value.items = []
-        state.value.error = null
-        state.value.loading = false
-        state.value.meta = undefined
-        state.value.page = undefined
-        state.value.perPage = options?.perPage || 10
-        state.value.syncUrl = options?.syncUrl ?? false
-        state.value.sort = options?.sort || ''
-        state.value.search = undefined
-        state.value.filter = {}
-        state.value.__updated = new Date()
-        state.value.__hash = undefined
-        state.value.__ssr = options?.ssr ?? false
+        state.value = initialState()
     }
 
     return {

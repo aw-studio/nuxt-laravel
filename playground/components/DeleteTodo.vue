@@ -14,5 +14,5 @@ const props = defineProps({
 })
 
 const { destroy } = useTodos
-const form = destroy(props.todo)
+const form = destroy(props.todo.id)
 </script>

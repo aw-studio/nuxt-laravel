@@ -1,13 +1,26 @@
 import type { Ref, ToRefs } from 'vue'
 import type { ZodObject, ZodRawShape } from 'zod'
 
+export type ModuleOptions = {
+    /** Base URL of the Laravel API, e.g. https://api.example.com */
+    baseUrl: string
+}
+
 export type LaravelResponseMeta = {
-    total: number
     per_page: number
-    current_page: number
-    last_page: number
-    from: number
-    to: number
+    /**
+     * Present on a length-aware paginator. A cursor paginator gives up the
+     * total row count and therefore the last page, in exchange for not running
+     * a COUNT and not degrading on deep pages.
+     */
+    total?: number
+    current_page?: number
+    last_page?: number
+    from?: number
+    to?: number
+    /** Present on a cursor paginator. `null` means the result set is exhausted. */
+    next_cursor?: string | null
+    prev_cursor?: string | null
 }
 
 export type LaravelResponseLinks = {
@@ -37,17 +50,37 @@ export type LaravelIndexState<T> = {
     sort?: string
     search?: string
     filter: Filter
+    /** The cursor for the next page, in cursor mode. */
+    cursor?: string | null
     __updated: Date
     __hash?: string
-    __ssr: boolean
 }
 
 export type LaravelIndexOptions = {
     perPage?: number
     syncUrl?: boolean
     sort?: string
-    ssr?: boolean
     key?: string
+    /**
+     * How URL sync writes to browser history.
+     *
+     * `replace` (the default) keeps a filter change or page step out of the
+     * history stack, so the back button leaves the list rather than walking
+     * back through every intermediate state. Use `push` when each page should
+     * be a separate history entry.
+     */
+    historyMode?: 'replace' | 'push'
+    /**
+     * How the backend paginates.
+     *
+     * `page` (the default) pairs with the backend's `paginate()` and gives you
+     * page numbers, a total and a last page.
+     *
+     * `cursor` pairs with `cursorPaginate()`. It suits infinite scroll via
+     * `loadMore()`: no COUNT is run and deep pages do not degrade, but there is
+     * no total, no last page, and no jumping to an arbitrary page.
+     */
+    paginationMode?: 'page' | 'cursor'
     /**
      * Restrict which query-string keys are hydrated into `filter` on init.
      *
@@ -102,11 +135,31 @@ export type FilterOperatorOption =
     | { $containsi: string | number }
     | { $notContainsi: string | number }
     | { $between: [string | number, string | number] }
+    | { $startsWith: string | number }
+    | { $endsWith: string | number }
+    | { $null: boolean }
+    | { $notNull: boolean }
 
-export type Filter =
-    | { [key: string]: FilterOperatorOption | string | number | boolean }
-    | { $or: Filter[] }
-    | { $and: Filter[] }
+export type FilterValue =
+    | FilterOperatorOption
+    | string
+    | number
+    | boolean
+    | null
+
+/**
+ * A filter object.
+ *
+ * `$and` / `$or` are optional keys rather than separate union members, so
+ * `filter.completed` typechecks. As a union, any property access failed
+ * because the `$or` branch had no such key.
+ */
+export type Filter = {
+    $and?: Filter[]
+    $or?: Filter[]
+} & {
+    [key: string]: FilterValue | Filter[] | undefined
+}
 
 export type ModelResponse<T> = { data: T }
 
@@ -114,45 +167,56 @@ export type LaravelGetOptions = {
     query?: Record<string, any>
 }
 
-export type CrudParams<TForm> = {
+export type CrudOperation = 'index' | 'show' | 'create' | 'update' | 'destroy'
+
+/** The operations that submit a form, and therefore carry a schema. */
+export type CrudFormOperation = 'create' | 'update' | 'destroy'
+
+export type CrudOperationParams = {
+    /** Path segment prefixed to the resolved endpoint, e.g. `/admin`. */
+    urlPrefix?: string
+    id?: string | number
+}
+
+export type CrudOperationConfig<TForm> = {
     /**
-     * The default endpoint for the model, used for CRUD operations.
-     *
-     * @var {string}
-     * @example '/api/events'
+     * Overrides the endpoint for this operation. `:id` is substituted when
+     * present, so `/api/products/:id/publish` works.
      */
-    endpoint: string
+    endpoint?: string
+    schema?: ZodObject<ZodRawShape>
+    initialValues?: TForm
+    onSuccess?: (response: any) => void
+    onError?: (error: any) => void
+}
 
+export type CrudOptions<TForm extends Record<string, any>> = {
     /**
-     * The Zod schema for the model, used for validation.
-     *
-     * @var {ZodObject<ZodRawShape>}
-     * @example z.object({ name: z.string().min(1) })
+     * The resource endpoint, e.g. `/api/products`. Member operations append
+     * the id. Optional only if every operation overrides it.
      */
-    schema: ZodObject<ZodRawShape>
+    endpoint?: string
 
-    /**
-     * The initial values for the form, used to populate the form fields.
-     *
-     * @var {TForm}
-     * @example { name: '', active: boolean }
-     */
-    initialValues: TForm
+    /** Zod schema used to validate the create and update forms. */
+    schema?: ZodObject<ZodRawShape>
 
-    /**
-     * Optional Zod schema for updating the model, used for validation.
-     * If not provided, the main schema will be used.
-     *
-     * @var {ZodObject<ZodRawShape>}
-     * @example z.object({ name: z.string().min(1) })
-     */
-    updateSchema?: ZodObject<ZodRawShape>
+    /** Initial values for the create form. */
+    initialValues?: TForm
 
-    onCreateSuccess?: (response: any) => void
-    onUpdateSuccess?: (response: any) => void
+    /** Prefix applied to every operation unless overridden per call. */
+    urlPrefix?: string
 
-    onCreateError?: (error: any) => void
-    onUpdateError?: (error: any) => void
+    onSuccess?: (response: any) => void
+    onError?: (error: any) => void
+
+    index?: { endpoint?: string, options?: LaravelIndexOptions }
+    show?: { endpoint?: string, options?: LaravelGetOptions }
+    create?: CrudOperationConfig<TForm>
+    update?: CrudOperationConfig<TForm>
+    destroy?: CrudOperationConfig<TForm>
+
+    /** Extra methods merged into the returned object. */
+    methods?: Record<string, (...args: any[]) => any>
 }
 
 export type LaravelFormOptions<TForm extends Record<string, any>> = {
@@ -186,4 +250,25 @@ export type FormError = {
         statusText: string
         url: string
     }
+}
+
+export type SanctumOptions = {
+    /** Route that sets the XSRF-TOKEN cookie. */
+    csrfEndpoint?: string
+    loginEndpoint?: string
+    logoutEndpoint?: string
+    /** Route returning the authenticated user. */
+    userEndpoint?: string
+    /**
+     * State key holding the user. Override to run more than one guard side by
+     * side, e.g. a staff guard and a separate member guard.
+     */
+    key?: string
+}
+
+export type SanctumCredentials = {
+    email?: string
+    password?: string
+    remember?: boolean
+    [key: string]: unknown
 }

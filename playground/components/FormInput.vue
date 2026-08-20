@@ -29,7 +29,9 @@ const emit = defineEmits(['update:modelValue'])
 
 const model = computed({
     get: () => props.modelValue,
-    set: value => {
+    // Annotated explicitly: Nuxt 3 and Nuxt 4 generate different tsconfigs, and
+    // under Nuxt 3 this parameter is an implicit any.
+    set: (value: typeof props.modelValue) => {
         // Emit the input event to update the parent component
         emit('update:modelValue', value)
     },
