@@ -675,3 +675,173 @@ describe('setConfig', () => {
         expect(index.state.value.syncUrl).toBe(false)
     })
 })
+
+describe('cursor pagination', () => {
+    /** A Laravel CursorPaginator envelope: no total, no last_page. */
+    const cursorPage = (
+        items: Array<{ id: number }>,
+        meta: { next_cursor?: string | null, prev_cursor?: string | null } = {}
+    ) => ({
+        data: items,
+        meta: {
+            per_page: 10,
+            next_cursor: null,
+            prev_cursor: null,
+            ...meta,
+        },
+    })
+
+    it('sends the cursor once one is known', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), {
+            syncUrl: false,
+            paginationMode: 'cursor',
+        })
+
+        api.mockResolvedValue(cursorPage([{ id: 1 }], { next_cursor: 'abc' }))
+        await index.load()
+
+        // The first request has no cursor; the next one carries it.
+        expect(requestedUrl()).not.toContain('cursor=')
+
+        index.loadMore()
+        await settle()
+
+        expect(decodeURIComponent(requestedUrl())).toContain('cursor=abc')
+    })
+
+    it('never sends a page number in cursor mode', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), {
+            syncUrl: false,
+            paginationMode: 'cursor',
+            perPage: 25,
+        })
+
+        api.mockResolvedValue(cursorPage([{ id: 1 }], { next_cursor: 'abc' }))
+        await index.load()
+
+        expect(requestedUrl()).not.toContain('page=')
+        expect(requestedUrl()).toContain('perPage=25')
+    })
+
+    it('appends on loadMore', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), {
+            syncUrl: false,
+            paginationMode: 'cursor',
+        })
+
+        api.mockResolvedValue(cursorPage([{ id: 1 }], { next_cursor: 'abc' }))
+        await index.load()
+
+        api.mockResolvedValue(cursorPage([{ id: 2 }], { next_cursor: null }))
+        index.loadMore()
+        await settle()
+
+        expect(index.state.value.items).toEqual([{ id: 1 }, { id: 2 }])
+    })
+
+    it('reports hasNextPage from the cursor, not from last_page', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), {
+            syncUrl: false,
+            paginationMode: 'cursor',
+        })
+
+        api.mockResolvedValue(cursorPage([{ id: 1 }], { next_cursor: 'abc' }))
+        await index.load()
+        expect(index.hasNextPage.value).toBe(true)
+
+        api.mockResolvedValue(cursorPage([{ id: 2 }], { next_cursor: null }))
+        index.loadMore()
+        await settle()
+
+        // A cursor paginator gives up total and last_page, so exhaustion is
+        // signalled by a null next_cursor.
+        expect(index.hasNextPage.value).toBe(false)
+    })
+
+    it('stops loading more once the cursor runs out', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), {
+            syncUrl: false,
+            paginationMode: 'cursor',
+        })
+
+        api.mockResolvedValue(cursorPage([{ id: 1 }], { next_cursor: null }))
+        await index.load()
+
+        const before = api.mock.calls.length
+        index.loadMore()
+        await settle()
+
+        expect(api.mock.calls.length).toBe(before)
+    })
+
+    it('resets the cursor when a filter changes', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), {
+            syncUrl: false,
+            paginationMode: 'cursor',
+        })
+
+        api.mockResolvedValue(cursorPage([{ id: 1 }], { next_cursor: 'abc' }))
+        await index.load()
+
+        index.setFilter({ name: 'Shirt' })
+        await settle()
+
+        // A stale cursor points into the old result set; carrying it over would
+        // return an arbitrary slice of the new one.
+        expect(requestedUrl()).not.toContain('cursor=')
+    })
+
+    it('leaves page-based indexes untouched', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), { syncUrl: false })
+
+        await index.load(2)
+
+        expect(requestedUrl()).toContain('page=2')
+        expect(requestedUrl()).not.toContain('cursor=')
+    })
+})
+
+describe('cursor mode — restarting', () => {
+    const cursorPage = (items: Array<{ id: number }>, next: string | null) => ({
+        data: items,
+        meta: { per_page: 10, next_cursor: next, prev_cursor: null },
+    })
+
+    it('restarts from the beginning on an explicit load', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), {
+            syncUrl: false,
+            paginationMode: 'cursor',
+        })
+
+        api.mockResolvedValue(cursorPage([{ id: 1 }], 'abc'))
+        await index.load()
+        index.loadMore()
+        await settle()
+        expect(decodeURIComponent(requestedUrl())).toContain('cursor=abc')
+
+        // load() means "give me this list from the top", so a carried-over
+        // cursor would silently return a slice from the middle.
+        await index.load()
+
+        expect(requestedUrl()).not.toContain('cursor=')
+    })
+
+    it('replaces rather than appends on an explicit load', async () => {
+        const index = useLaravelIndex(uniqueEndpoint(), {
+            syncUrl: false,
+            paginationMode: 'cursor',
+        })
+
+        api.mockResolvedValue(cursorPage([{ id: 1 }], 'abc'))
+        await index.load()
+        api.mockResolvedValue(cursorPage([{ id: 2 }], 'def'))
+        index.loadMore()
+        await settle()
+        expect(index.state.value.items).toHaveLength(2)
+
+        api.mockResolvedValue(cursorPage([{ id: 9 }], 'xyz'))
+        await index.load()
+
+        expect(index.state.value.items).toEqual([{ id: 9 }])
+    })
+})

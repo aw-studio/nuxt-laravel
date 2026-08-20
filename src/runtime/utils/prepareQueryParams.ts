@@ -5,9 +5,13 @@ export const prepareQueryParams = (
     state: LaravelIndexState<any>
 ): URLSearchParams => {
     const params = new URLSearchParams()
-    const { page, sort, search, filter, perPage } = state
+    const { page, sort, search, filter, perPage, cursor } = state
 
-    if (page) {
+    // A cursor and a page number are mutually exclusive: the backend's
+    // cursorPaginate() reads `cursor` and ignores `page`.
+    if (cursor) {
+        params.append('cursor', cursor)
+    } else if (page) {
         params.append('page', String(page))
     }
     if (perPage) {

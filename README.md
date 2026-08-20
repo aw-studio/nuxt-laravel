@@ -292,6 +292,7 @@ const { items } = await useProducts({
 | `sort`       | `string`                  | —           | Initial sort.                                                         |
 | `key`         | `string`                 | endpoint    | Override the shared state key.                                        |
 | `historyMode` | `'replace' \| 'push'`    | `'replace'` | Whether URL sync adds browser history entries.                        |
+| `paginationMode` | `'page' \| 'cursor'` | `'page'`    | Which backend paginator to pair with (see below).                     |
 | `urlFilters` | `string[]`                | `undefined` | Allowlist of query keys to hydrate into the filter (see below).      |
 | `onError`    | `(error) => void`         | —           | Called when a request fails.                                          |
 | `onSuccess`  | `(response) => void`      | —           | Called on a successful response.                                      |
@@ -430,6 +431,33 @@ export const useVehicleGroups = (options?: LaravelIndexOptions) =>
     ...options,
   })
 ```
+
+### Cursor pagination
+
+For large lists, pair with the backend's `cursorPaginate()` instead. Cursor
+pagination is keyset-based: no `COUNT` over the full result set, and no `OFFSET`
+degradation on deep pages.
+
+```ts
+const { items, load, loadMore, hasNextPage } = useLaravelIndex<Product>(
+  '/api/products',
+  { paginationMode: 'cursor', perPage: 25 }
+)
+
+await load()        // first page
+loadMore()          // follows next_cursor, appending
+```
+
+The trade-off is that a cursor paginator gives up `total` and `last_page`, so:
+
+- `hasNextPage` comes from the cursor rather than a page count
+- `hasPrevPage`, `nextPage`, `prevPage` and `setPage` do not apply
+- `meta.total` and `meta.last_page` are absent, so a numbered pager cannot be
+  rendered — this mode suits infinite scroll
+
+`load()` always restarts from the top; `loadMore()` is what carries the cursor
+forward. Changing sort, search or a filter resets the cursor, since a stale one
+points into the previous result set.
 
 ### Sorting
 

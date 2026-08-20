@@ -1,8 +1,11 @@
 {
     "name": "@aw-studio/nuxt-laravel",
     "version": "1.0.0",
-    "description": "Nuxt Laravel",
-    "repository": "aw-studio/nuxt-laravel",
+    "description": "Sanctum auth, a typed HTTP client, filterable model indexes and Zod-validated forms for consuming a Laravel API from Nuxt 3 or 4.",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/aw-studio/nuxt-laravel.git"
+    },
     "license": "MIT",
     "type": "module",
     "author": "Jannes Behrens",
@@ -21,7 +24,9 @@
         }
     },
     "files": [
-        "dist"
+        "dist",
+        "CHANGELOG.md",
+        "UPGRADE.md"
     ],
     "publishConfig": {
         "access": "public"
@@ -66,5 +71,21 @@
         "@vee-validate/zod": {
             "zod": "$zod"
         }
+    },
+    "keywords": [
+        "nuxt",
+        "nuxt-module",
+        "laravel",
+        "sanctum",
+        "api",
+        "zod",
+        "vee-validate",
+        "crud",
+        "pagination",
+        "filtering"
+    ],
+    "homepage": "https://github.com/aw-studio/nuxt-laravel",
+    "bugs": {
+        "url": "https://github.com/aw-studio/nuxt-laravel/issues"
     }
 }

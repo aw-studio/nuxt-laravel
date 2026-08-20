@@ -33,6 +33,8 @@ export function useLaravelIndex<T extends object>(
      * different fallbacks, and resetting silently turned URL sync on, invented
      * a page size and replaced an unset sort with an empty string.
      */
+    const isCursorMode = options?.paginationMode === 'cursor'
+
     const initialState = (): LaravelIndexState<T> => ({
         items: [] as T[],
         error: null,
@@ -44,6 +46,7 @@ export function useLaravelIndex<T extends object>(
         sort: options?.sort,
         search: undefined,
         filter: {} as Filter,
+        cursor: undefined,
         __updated: new Date(),
         __hash: undefined,
     })
@@ -90,7 +93,12 @@ export function useLaravelIndex<T extends object>(
             }
 
             state.value.meta = response.meta
-            state.value.page = response.meta?.current_page
+
+            if (isCursorMode) {
+                state.value.cursor = response.meta?.next_cursor ?? null
+            } else {
+                state.value.page = response.meta?.current_page
+            }
         } catch (e: any) {
             if (!append) {
                 state.value.items = []
@@ -116,9 +124,16 @@ export function useLaravelIndex<T extends object>(
     }
 
     const hasNextPage = computed(() => {
+        // A cursor paginator has no last_page; a null next_cursor means the
+        // result set is exhausted.
+        if (isCursorMode) {
+            return !!state.value.cursor
+        }
+
         return !!(
             state.value.meta &&
             state.value.meta.current_page &&
+            state.value.meta.last_page &&
             state.value.meta.current_page < state.value.meta.last_page
         )
     })
@@ -189,7 +204,13 @@ export function useLaravelIndex<T extends object>(
         // if no page is passed and syncUrl is disabled, set the current page to 1.
         // then, if syncUrl is enabled, update the URL with the new page
 
-        if (page) {
+        if (isCursorMode) {
+            // Page numbers are meaningless here, and load() means "from the
+            // top" — carrying the cursor over would silently return a slice
+            // from the middle. loadMore() bypasses this and keeps the cursor.
+            state.value.page = undefined
+            state.value.cursor = undefined
+        } else if (page) {
             state.value.page = page
         } else if (state.value.syncUrl) {
             state.value.page = Number(route.query.page) || 1
@@ -227,11 +248,17 @@ export function useLaravelIndex<T extends object>(
     }
 
     const loadMore = () => {
-        if (state.value.loading) {
+        if (state.value.loading || !state.value.meta) {
             return
         }
 
-        if (!state.value.meta) {
+        if (isCursorMode) {
+            if (!state.value.cursor) {
+                return
+            }
+
+            fetchFromApi(true)
+
             return
         }
 
@@ -340,6 +367,10 @@ export function useLaravelIndex<T extends object>(
             if (!hasChanges()) {
                 return
             }
+
+            // A stale cursor points into the old result set; carrying it over
+            // would return an arbitrary slice of the new one.
+            state.value.cursor = undefined
 
             // Always reload the first page. Branching on `state.page` here used
             // to send the very first sort/search/filter change down `loadAll()`,

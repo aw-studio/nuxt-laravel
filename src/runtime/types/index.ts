@@ -7,12 +7,20 @@ export type ModuleOptions = {
 }
 
 export type LaravelResponseMeta = {
-    total: number
     per_page: number
-    current_page: number
-    last_page: number
-    from: number
-    to: number
+    /**
+     * Present on a length-aware paginator. A cursor paginator gives up the
+     * total row count and therefore the last page, in exchange for not running
+     * a COUNT and not degrading on deep pages.
+     */
+    total?: number
+    current_page?: number
+    last_page?: number
+    from?: number
+    to?: number
+    /** Present on a cursor paginator. `null` means the result set is exhausted. */
+    next_cursor?: string | null
+    prev_cursor?: string | null
 }
 
 export type LaravelResponseLinks = {
@@ -42,6 +50,8 @@ export type LaravelIndexState<T> = {
     sort?: string
     search?: string
     filter: Filter
+    /** The cursor for the next page, in cursor mode. */
+    cursor?: string | null
     __updated: Date
     __hash?: string
 }
@@ -60,6 +70,17 @@ export type LaravelIndexOptions = {
      * be a separate history entry.
      */
     historyMode?: 'replace' | 'push'
+    /**
+     * How the backend paginates.
+     *
+     * `page` (the default) pairs with the backend's `paginate()` and gives you
+     * page numbers, a total and a last page.
+     *
+     * `cursor` pairs with `cursorPaginate()`. It suits infinite scroll via
+     * `loadMore()`: no COUNT is run and deep pages do not degrade, but there is
+     * no total, no last page, and no jumping to an arbitrary page.
+     */
+    paginationMode?: 'page' | 'cursor'
     /**
      * Restrict which query-string keys are hydrated into `filter` on init.
      *
