@@ -75,10 +75,9 @@ jobs:
       - name: Test
         run: npm run test
 
-      # Typechecks the module source only. The playground is excluded because
-      # it currently has unrelated type errors; see `npm run test:types`.
-      - name: Typecheck module
-        run: npx vue-tsc --noEmit
+      # Covers the module source and the playground.
+      - name: Typecheck
+        run: npm run test:types
 
   build:
     runs-on: ubuntu-latest

@@ -1,6 +1,5 @@
 import { useNuxtApp, useRoute, useRouter, useState } from 'nuxt/app'
 import { computed, toRefs, watch } from 'vue'
-import { md5 } from '../utils/md5'
 import type {
     Filter,
     IndexResponse,
@@ -277,15 +276,16 @@ export function useLaravelIndex<T extends object>(
     }
 
     const hasChanges = () => {
-        const newHash = md5(
-            JSON.stringify({
-                sort: state.value.sort,
-                search: state.value.search,
-                filter: state.value.filter,
-            })
-        )
+        // The serialized value is the fingerprint. Hashing it added 180 lines
+        // of bit-twiddling to compare two short strings, and a hash can only
+        // ever collide where the string cannot.
+        const newHash = JSON.stringify({
+            sort: state.value.sort,
+            search: state.value.search,
+            filter: state.value.filter,
+        })
 
-        // Compare with previous hash
+        // Compare with previous fingerprint
         const changed = state.value.__hash !== newHash
 
         if (changed) {

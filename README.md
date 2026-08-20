@@ -32,7 +32,6 @@ package on the backend for the filtering/sorting/pagination API.
   - [Mutating State](#mutating-state)
 - [Forms — `useLaravelForm`](#forms--uselaravelform)
 - [CRUD — `useLaravelCrud`](#crud--uselaravelcrud)
-- [Resource CRUD — `useLaravelCrudResource`](#resource-crud--uselaravelcrudresource)
 - [Example](#example)
 - [Contribution](#contribution)
 
@@ -147,20 +146,61 @@ Two consequences worth knowing:
 
 ## Authentication (Sanctum)
 
-`useLaravelSanctum` primes the CSRF cookie; afterwards every request made
-through the client automatically sends the `X-XSRF-TOKEN` header and includes
-credentials.
+`useLaravelSanctum` covers the whole SPA cookie flow. This is stateful cookie
+auth, not token auth: the browser holds a session cookie, and every request made
+through the client sends it along with the `X-XSRF-TOKEN` header.
 
 ```ts
-const { csrf } = useLaravelSanctum()
-const { post, get } = useLaravelApi()
+const { user, isAuthenticated, login, logout, fetchUser } = useLaravelSanctum<User>()
 
-// Prime the XSRF cookie, then log in
-await csrf()
-await post('/login', { email, password })
+await login({ email, password })   // primes CSRF, posts, then loads the user
+console.log(user.value)            // the authenticated user
+await logout()                     // clears the session and the cached user
+```
 
-// Subsequent authenticated requests just work
-const user = await get('/api/user')
+| Returns | Type | |
+| --- | --- | --- |
+| `user` | `Ref<TUser \| null>` | The authenticated user, shared app-wide |
+| `isAuthenticated` | `ComputedRef<boolean>` | Whether `user` is set |
+| `loading` | `Ref<boolean>` | True while `fetchUser` is in flight |
+| `login(credentials)` | `Promise` | Primes CSRF, posts, then loads the user |
+| `logout()` | `Promise` | Clears the session and the cached user |
+| `fetchUser()` | `Promise<TUser \| null>` | Loads the user, or `null` for a guest |
+| `csrf()` | `Promise` | Primes the XSRF cookie by itself |
+
+`fetchUser()` resolves to `null` on a `401` or `419` rather than throwing — a
+guest is an expected answer, not an error, so asking "is anyone logged in" does
+not need a `try/catch`. Genuine failures still throw.
+
+Restore the session on app start with a plugin or middleware:
+
+```ts
+export default defineNuxtRouteMiddleware(async () => {
+  const { isAuthenticated, fetchUser } = useLaravelSanctum()
+
+  if (!isAuthenticated.value) {
+    await fetchUser()
+  }
+
+  if (!isAuthenticated.value) {
+    return navigateTo('/login')
+  }
+})
+```
+
+### Multiple guards
+
+Point the composable at different routes and give it its own state key to run
+more than one guard side by side:
+
+```ts
+export const useMemberAuth = () =>
+  useLaravelSanctum<Member>({
+    key: 'member',
+    loginEndpoint: '/member/login',
+    logoutEndpoint: '/member/logout',
+    userEndpoint: '/api/member',
+  })
 ```
 
 ## HTTP Client — `useLaravelApi`
@@ -469,57 +509,79 @@ const form = useLaravelForm<LoginForm>({
 
 ## CRUD — `useLaravelCrud`
 
-Composes index/get/form into a single resource bound to one `endpoint`,
-`schema`, and `initialValues`.
+Composes index, get and form helpers into one resource API. Every operation
+resolves to a URL and a verb:
+
+| Operation | Verb | URL |
+| --- | --- | --- |
+| `index()` | GET | `{urlPrefix}/{endpoint}` |
+| `show(id)` | GET | `{urlPrefix}/{endpoint}/{id}` |
+| `create()` | POST | `{urlPrefix}/{endpoint}` |
+| `update(model)` | PUT | `{urlPrefix}/{endpoint}/{id}` |
+| `destroy(id)` | DELETE | `{urlPrefix}/{endpoint}/{id}` |
 
 ```ts
-import * as z from 'zod'
+import { z } from 'zod'
 
-type Todo = { id: number; title: string; completed: boolean }
-type TodoForm = Omit<Todo, 'id'>
+export const useProducts = () =>
+  useLaravelCrud<Product, ProductForm>({
+    endpoint: '/api/products',
+    schema: z.object({ name: z.string().min(1) }),
+    initialValues: { name: '' },
+  })
+```
 
-export const useTodos = useLaravelCrud<Todo, TodoForm>({
-  endpoint: '/api/todos',
-  initialValues: { title: '', completed: false },
-  schema: z.object({
-    title: z.string().min(1),
-    completed: z.boolean().default(false),
-  }),
-  onCreateSuccess: res => console.log('created', res),
+```vue
+<script setup lang="ts">
+const { index, create, update, destroy } = useProducts()
+
+const { items, load } = index({ perPage: 25 })
+await load()
+
+const form = create()
+await form.submit()
+</script>
+```
+
+### Per-operation configuration
+
+Any operation can override the endpoint, schema, initial values or callbacks.
+An endpoint containing `:id` has it substituted:
+
+```ts
+useLaravelCrud<Product, ProductForm>({
+  endpoint: '/api/products',
+  schema,
+  initialValues,
+
+  // applied to every operation unless overridden per call
+  urlPrefix: '/admin',
+
+  create: { onSuccess: () => refresh() },
+  update: { schema: updateSchema },
+  destroy: { endpoint: '/api/products/:id/archive' },
+
+  index: { options: { perPage: 25, syncUrl: true } },
+  show: { options: { query: { with: 'variants' } } },
+
+  // merged into the returned object
+  methods: {
+    publish: (id: number) => useLaravelApi().post(`/api/products/${id}/publish`, {}),
+  },
 })
 ```
 
-```ts
-const { index, show, create, update, destroy } = useTodos
+`destroy` deliberately does **not** inherit the resource schema — a `DELETE`
+sends no meaningful body, and validating an empty payload against the create
+schema would reject every delete. Give it its own `schema` if you do need one.
 
-const list = await index({ perPage: 10 }) // → useLaravelIndex
-const one = await show('1')               // → useLaravelGet
-const createForm = create()               // → useLaravelForm (POST)
-const editForm = update(todo)             // → useLaravelForm (PUT /api/todos/:id)
-const deleteForm = destroy(todo)          // → useLaravelForm (DELETE)
-```
-
-## Resource CRUD — `useLaravelCrudResource`
-
-A more configurable factory when operations need different endpoints, schemas,
-initial values, callbacks, a `:id` placeholder, a `urlPrefix`, or extra custom
-methods.
+A `urlPrefix` can also be passed per call, which is useful when the same
+resource is reachable under more than one prefix:
 
 ```ts
-const useArticles = () =>
-  useLaravelCrudResource<{ index: Article }, { create: ArticleForm }>({
-    config: { endpoint: '/api/articles', schema, initialValues },
-    show: { options: { query: { with: 'author' } } },
-    update: { endpoint: '/api/articles/:id/publish' },
-    methods: {
-      archive: (id: number) => useLaravelApi().post(`/api/articles/${id}/archive`, {}),
-    },
-  })
+const { create } = useProducts()
 
-const { index, show, create, update, destroy, archive } = useArticles()
-
-// Optionally scope endpoints with a urlPrefix
-const list = index(undefined, { urlPrefix: '/admin' })
+create({ urlPrefix: '/admin' })   // POST /admin/api/products
 ```
 
 ## Example

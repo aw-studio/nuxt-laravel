@@ -6,11 +6,11 @@ import {
 } from '@nuxt/kit'
 import { defu } from 'defu'
 
+import type { ModuleOptions } from './runtime/types'
+
 const MODULE_NAME = 'laravel'
 
-export type ModuleOptions = {
-    baseUrl: string
-}
+export type { ModuleOptions }
 
 const defaultModuleOptions: ModuleOptions = {
     baseUrl: 'http://localhost:8000',

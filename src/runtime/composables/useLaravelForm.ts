@@ -44,20 +44,26 @@ export function useLaravelForm<TForm extends Record<string, any>>(
 
     const { values, setFieldError, defineField, handleSubmit } = form
 
-    const fields = reactive({} as TForm)
-    const fieldProps = reactive({}) as FieldProps<TForm>
-    const fieldMeta = reactive({}) as FieldMetaMap<TForm>
+    // Built as plain records and asserted once at the end. Writing into a
+    // mapped type key-by-key is what forced three suppressions here: TS cannot
+    // know that `fields[key]` and the value produced for `key` line up, because
+    // the loop erases the correlation between them.
+    const fieldAccumulator: Record<string, unknown> = {}
+    const fieldPropsAccumulator: Record<string, unknown> = {}
+    const fieldMetaAccumulator: Record<string, unknown> = {}
 
-    for (const key of Object.keys(initialValues) as (keyof TForm)[]) {
-        const [field, props] = defineField(key as string)
-        const { meta } = useField(() => key as string)
-        // @ts-expect-error: Type 'keyof TForm' cannot be used to index type 'Reactive<{ [K in keyof TForm]: Ref<TForm[K], TForm[K]>; }>'.ts(2536)
-        fields[key] = field
-        // @ts-expect-error: Property 'validateOnValueUpdate' is missing in type 'Ref<BaseFieldProps & GenericObject, BaseFieldProps & GenericObject>' but required in type 'FieldOptions<TForm[keyof TForm]>'
-        fieldProps[key] = props
-        // @ts-expect-error: Type 'FieldMeta<unknown>' is not assignable to type 'FieldMeta<TForm[keyof TForm]>'. Type 'unknown' is not assignable to type 'TForm[keyof TForm]'. 'unknown' is assignable to the constraint of type 'TForm[keyof TForm]', but 'TForm[keyof TForm]' could be instantiated with a different subtype of constraint 'any'.
-        fieldMeta[key] = meta
+    for (const key of Object.keys(initialValues)) {
+        const [field, props] = defineField(key)
+        const { meta } = useField(() => key)
+
+        fieldAccumulator[key] = field
+        fieldPropsAccumulator[key] = props
+        fieldMetaAccumulator[key] = meta
     }
+
+    const fields = reactive(fieldAccumulator) as TForm
+    const fieldProps = reactive(fieldPropsAccumulator) as FieldProps<TForm>
+    const fieldMeta = reactive(fieldMetaAccumulator) as FieldMetaMap<TForm>
 
     const submit = handleSubmit(
         async () => {
